@@ -1,0 +1,40 @@
+name: nba-mlops
+
+services:
+  mlflow:
+    image: nba-mlops:0.1.0
+    build: .
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --host 0.0.0.0 --port 5000
+    ports:
+      - "127.0.0.1:5000:5000"   # localhost only
+    volumes:
+      - mlflow-data:/mlflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # One-off jobs: docker compose run --rm app <command>
+  app:
+    image: nba-mlops:0.1.0
+    profiles: ["job"]
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ${HOME}/nba-mlops-dvcstore:/dvcstore
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      IMAGE_ID: ${IMAGE_ID:-unknown}
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+volumes:
+  mlflow-data:

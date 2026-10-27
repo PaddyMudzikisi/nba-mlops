@@ -1,0 +1,37 @@
+seed: 42
+n_jobs: 4
+
+data:
+  n_customers: 20000
+  start: "2025-01-01"
+  months: 12
+
+# Out-of-time split: train on offers up to this date, test on the rest.
+split:
+  train_end: "2025-09-30"
+
+# Action catalogue. value/cost are placeholder unit values for the
+# expected-value ranking; replace with figures agreed with the business.
+actions:
+  savings_upgrade: {value: 15, cost: 1}
+  personal_loan:   {value: 120, cost: 3}
+  credit_card:     {value: 60, cost: 2}
+  fixed_deposit:   {value: 40, cost: 1}
+  digital_enrol:   {value: 10, cost: 0.5}
+
+xgboost:
+  n_estimators: 300
+  max_depth: 4
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  min_child_weight: 5
+  reg_lambda: 1.0
+  tree_method: hist
+  eval_metric: aucpr
+
+reproducibility:
+  tolerance: 1.0e-6
+
+mlflow:
+  experiment: nba
