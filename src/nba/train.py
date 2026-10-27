@@ -46,7 +46,8 @@ def fit_action(data, action, params):
     pos = int(y_train.sum())
     model = xgb.XGBClassifier(
         **params["xgboost"],
-        scale_pos_weight=(len(y_train) - pos) / pos,
+        # Runs recorded before balance_classes existed were trained balanced.
+        scale_pos_weight=(len(y_train) - pos) / pos if params.get("balance_classes", True) else 1.0,
         random_state=params["seed"],
         n_jobs=params["n_jobs"],
         enable_categorical=True,
@@ -72,6 +73,7 @@ def main():
         mlflow.set_tags(prov)
         mlflow.log_artifact(str(PARAMS_PATH))
         mlflow.log_params({"seed": params["seed"], "train_end": params["split"]["train_end"],
+                           "balance_classes": params.get("balance_classes", True),
                            **{f"xgb_{k}": v for k, v in params["xgboost"].items()}})
         if prov["git_dirty"] == "True":
             print("WARNING: uncommitted changes; this run cannot be tied to an exact commit.")

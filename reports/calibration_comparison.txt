@@ -1,0 +1,26 @@
+action                     variant           AUC   pred    obs   brier
+Debit_Card_Activation      spw raw         0.632  0.331  0.203  0.1968
+Debit_Card_Activation      spw odds-corr   0.632  0.158  0.203  0.1642
+Debit_Card_Activation      no spw          0.640  0.215  0.203  0.1673
+Debit_Card_Activation      spw + Platt     0.624  0.208  0.203  0.1585
+                           train acceptance rate 0.226
+Fixed_Deposit_Offer        spw raw         0.710  0.259  0.124  0.1429
+Fixed_Deposit_Offer        spw odds-corr   0.710  0.068  0.124  0.1082
+Fixed_Deposit_Offer        no spw          0.731  0.116  0.124  0.1041
+Fixed_Deposit_Offer        spw + Platt     0.698  0.116  0.124  0.1029
+                           train acceptance rate 0.122
+Mobile_Banking_Activation  spw raw         0.611  0.281  0.156  0.1784
+Mobile_Banking_Activation  spw odds-corr   0.611  0.121  0.156  0.1404
+Mobile_Banking_Activation  no spw          0.609  0.173  0.156  0.1417
+Mobile_Banking_Activation  spw + Platt     0.588  0.172  0.156  0.1366
+                           train acceptance rate 0.201
+Personal_Loan_Offer        spw raw         0.720  0.241  0.189  0.1619
+Personal_Loan_Offer        spw odds-corr   0.720  0.119  0.189  0.1459
+Personal_Loan_Offer        no spw          0.727  0.151  0.189  0.1410
+Personal_Loan_Offer        spw + Platt     0.726  0.178  0.189  0.1407
+                           train acceptance rate 0.193
+Savings_Account_Upsell     spw raw         0.639  0.301  0.210  0.1850
+Savings_Account_Upsell     spw odds-corr   0.639  0.095  0.210  0.1755
+Savings_Account_Upsell     no spw          0.651  0.137  0.210  0.1665
+Savings_Account_Upsell     spw + Platt     0.641  0.153  0.210  0.1624
+                           train acceptance rate 0.157

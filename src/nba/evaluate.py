@@ -19,7 +19,7 @@ import tempfile
 import mlflow
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import brier_score_loss, roc_auc_score
 
 from nba.config import REPO, load_params
 from nba.features import load_data
@@ -101,6 +101,10 @@ def main():
         "Random": pd.DataFrame(1 / len(actions), index=test.index, columns=actions),
     }
 
+    # If the logged propensities are proper probabilities over these actions,
+    # E[1 / p] = number of actions, so the mean weight under a uniform policy is 1.
+    propensity_check = float((1 / len(actions) / test.propensity).mean())
+
     results = {}
     for name, target in targets.items():
         w, r, contrib = ope_contributions(target, test.action, reward, test.propensity, q)
@@ -119,7 +123,8 @@ def main():
         raw = policy.models[a].predict_proba(policy.encode(rows))[:, 1]
         calibration[a] = {"observed_rate": float(rows.accepted.mean()),
                           "mean_raw_proba": float(raw.mean()),
-                          "mean_calibrated_proba": float(proba.loc[rows.index, a].mean())}
+                          "mean_calibrated_proba": float(proba.loc[rows.index, a].mean()),
+                          "brier": float(brier_score_loss(rows.accepted, proba.loc[rows.index, a]))}
 
     report = {
         "train_run_id": args.run_id,
@@ -131,6 +136,7 @@ def main():
             "Logged": test.action.value_counts(normalize=True).round(4).to_dict(),
         },
         "calibration": calibration,
+        "propensity_check_mean_uniform_weight": propensity_check,
         "fairness_by_gender": fairness(test, recommended, proba),
     }
     REPORTS.mkdir(exist_ok=True)
@@ -155,7 +161,9 @@ def main():
         print(f"  {name:30s} {cells}  matched={res['matched_offers']}")
     print("\nCalibration (observed vs mean predicted, raw -> calibrated):")
     for a, c in calibration.items():
-        print(f"  {a:26s} {c['observed_rate']:.3f}  {c['mean_raw_proba']:.3f} -> {c['mean_calibrated_proba']:.3f}")
+        print(f"  {a:26s} {c['observed_rate']:.3f}  {c['mean_raw_proba']:.3f} -> {c['mean_calibrated_proba']:.3f}"
+              f"  Brier {c['brier']:.4f}")
+    print(f"\nPropensity check: mean weight under uniform policy = {propensity_check:.3f} (1.0 if consistent)")
     print("\nRecommendation share, NBA:", report["recommendation_share"]["NBA"])
     print("\nBy gender:")
     for g, f in report["fairness_by_gender"].items():

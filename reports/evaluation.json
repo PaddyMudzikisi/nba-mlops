@@ -1,0 +1,192 @@
+{
+  "train_run_id": "ec924b2ce1a54f05ba7e8dc6365b6271",
+  "test_period": [
+    "2026-01-01",
+    "2026-06-28"
+  ],
+  "n_test_offers": 4120,
+  "policy_value_per_offer_usd": {
+    "NBA (expected value)": {
+      "IPS": {
+        "value": 14.208356624214654,
+        "ci_low": 11.766523476464997,
+        "ci_high": 16.847160185981107
+      },
+      "DM": {
+        "value": 21.23668120248995,
+        "ci_low": 20.380089899204787,
+        "ci_high": 22.117245272258714
+      },
+      "DR": {
+        "value": 23.543551701420103,
+        "ci_low": 21.17910598149154,
+        "ci_high": 25.941995142910205
+      },
+      "SNIPS": {
+        "value": 21.233996285243673,
+        "ci_low": 17.894129527954814,
+        "ci_high": 24.79708017193401
+      },
+      "matched_offers": 772,
+      "effective_sample_size": 693.0976047956393
+    },
+    "Best single offer": {
+      "IPS": {
+        "value": 16.409751692269804,
+        "ci_low": 13.455031868917295,
+        "ci_high": 19.609086558919312
+      },
+      "DM": {
+        "value": 18.42200762269127,
+        "ci_low": 17.509582272495855,
+        "ci_high": 19.33730835296183
+      },
+      "DR": {
+        "value": 25.38487373529877,
+        "ci_low": 22.617514456264413,
+        "ci_high": 28.286462558294744
+      },
+      "SNIPS": {
+        "value": 26.76557265335434,
+        "ci_low": 22.30758332823174,
+        "ci_high": 31.473562085373906
+      },
+      "matched_offers": 641,
+      "effective_sample_size": 583.2970098638377
+    },
+    "Most offered": {
+      "IPS": {
+        "value": 7.467397854503967,
+        "ci_low": 6.625808553614946,
+        "ci_high": 8.38494169440382
+      },
+      "DM": {
+        "value": 3.3683529684227635,
+        "ci_low": 3.262545922222907,
+        "ci_high": 3.4778088124705486
+      },
+      "DR": {
+        "value": 7.422962326058836,
+        "ci_low": 6.635931133518733,
+        "ci_high": 8.297691872930471
+      },
+      "SNIPS": {
+        "value": 7.383627568807084,
+        "ci_low": 6.629648173461313,
+        "ci_high": 8.222777790629143
+      },
+      "matched_offers": 1393,
+      "effective_sample_size": 1221.7933217022605
+    },
+    "Random": {
+      "IPS": {
+        "value": 7.110741046706032,
+        "ci_low": 6.446058625882486,
+        "ci_high": 7.828198650712504
+      },
+      "DM": {
+        "value": 6.4309645413547525,
+        "ci_low": 6.213331896832755,
+        "ci_high": 6.6549407848781685
+      },
+      "DR": {
+        "value": 9.540714094344183,
+        "ci_low": 8.874163382097088,
+        "ci_high": 10.239490586425397
+      },
+      "SNIPS": {
+        "value": 10.433704928757285,
+        "ci_low": 9.457416900121542,
+        "ci_high": 11.468763501262769
+      },
+      "matched_offers": 4120,
+      "effective_sample_size": 3660.050559230068
+    },
+    "Logged (bank's actual offers)": {
+      "observed": 10.653492718446602,
+      "ci_low": 9.732280703883493,
+      "ci_high": 11.630920813106796
+    }
+  },
+  "recommendation_share": {
+    "NBA": {
+      "Personal_Loan_Offer": 0.4451,
+      "Fixed_Deposit_Offer": 0.234,
+      "Debit_Card_Activation": 0.1566,
+      "Savings_Account_Upsell": 0.0985,
+      "Mobile_Banking_Activation": 0.0658
+    },
+    "Logged": {
+      "Savings_Account_Upsell": 0.3381,
+      "Fixed_Deposit_Offer": 0.2456,
+      "Personal_Loan_Offer": 0.1556,
+      "Debit_Card_Activation": 0.1362,
+      "Mobile_Banking_Activation": 0.1245
+    }
+  },
+  "calibration": {
+    "Debit_Card_Activation": {
+      "observed_rate": 0.20320855614973263,
+      "mean_raw_proba": 0.33092164993286133,
+      "mean_calibrated_proba": 0.15835928916931152
+    },
+    "Fixed_Deposit_Offer": {
+      "observed_rate": 0.12351778656126482,
+      "mean_raw_proba": 0.2585330903530121,
+      "mean_calibrated_proba": 0.06802520155906677
+    },
+    "Mobile_Banking_Activation": {
+      "observed_rate": 0.15594541910331383,
+      "mean_raw_proba": 0.28129491209983826,
+      "mean_calibrated_proba": 0.12122110277414322
+    },
+    "Personal_Loan_Offer": {
+      "observed_rate": 0.18876755070202808,
+      "mean_raw_proba": 0.2406037300825119,
+      "mean_calibrated_proba": 0.11894825845956802
+    },
+    "Savings_Account_Upsell": {
+      "observed_rate": 0.2096195262024408,
+      "mean_raw_proba": 0.3005812168121338,
+      "mean_calibrated_proba": 0.09495852142572403
+    }
+  },
+  "fairness_by_gender": {
+    "Female": {
+      "n": 2142,
+      "acceptance_rate": 0.17086834733893558,
+      "auc_logged_action": 0.6782556121695467,
+      "recommendation_share": {
+        "Personal_Loan_Offer": 0.4421,
+        "Fixed_Deposit_Offer": 0.2428,
+        "Debit_Card_Activation": 0.1597,
+        "Savings_Account_Upsell": 0.0938,
+        "Mobile_Banking_Activation": 0.0616
+      }
+    },
+    "Male": {
+      "n": 1895,
+      "acceptance_rate": 0.18575197889182057,
+      "auc_logged_action": 0.6617458610734697,
+      "recommendation_share": {
+        "Personal_Loan_Offer": 0.4459,
+        "Fixed_Deposit_Offer": 0.228,
+        "Debit_Card_Activation": 0.1557,
+        "Savings_Account_Upsell": 0.1013,
+        "Mobile_Banking_Activation": 0.0691
+      }
+    },
+    "Prefer_not_to_say": {
+      "n": 83,
+      "acceptance_rate": 0.1686746987951807,
+      "auc_logged_action": 0.6149068322981367,
+      "recommendation_share": {
+        "Personal_Loan_Offer": 0.506,
+        "Savings_Account_Upsell": 0.1566,
+        "Fixed_Deposit_Offer": 0.1446,
+        "Debit_Card_Activation": 0.0964,
+        "Mobile_Banking_Activation": 0.0964
+      }
+    }
+  }
+}

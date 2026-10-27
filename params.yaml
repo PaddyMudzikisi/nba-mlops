@@ -22,6 +22,12 @@ dataset:
 split:
   train_end: "2025-12-31"
 
+# Reweight positives by negatives/positives. Off: weighting inflated the
+# probabilities and the odds correction then under-predicted every action
+# (experiments/calibration_comparison.py); expected-value ranking needs
+# calibrated probabilities, and unweighted AUC was equal or better.
+balance_classes: false
+
 xgboost:
   n_estimators: 300
   max_depth: 4
