@@ -54,8 +54,14 @@ def training_results(run_id):
                                   filter_string=f"tags.mlflow.parentRunId = '{run_id}'")
     out = {}
     for child in children:
-        shap = json.loads(open(client.download_artifacts(child.info.run_id, "shap_mean_abs.json")).read())
-        out[child.data.tags["action"]] = {**child.data.metrics, "shap": shap}
+        files = {f.path for f in client.list_artifacts(child.info.run_id)}
+        if "importance.json" in files:
+            imp = json.loads(open(client.download_artifacts(child.info.run_id, "importance.json")).read())
+            method, values = imp["method"], imp["importance"]
+        else:  # runs recorded before importance.json
+            method = "mean |SHAP|"
+            values = json.loads(open(client.download_artifacts(child.info.run_id, "shap_mean_abs.json")).read())
+        out[child.data.tags["action"]] = {**child.data.metrics, "shap": values, "importance_method": method}
     return dict(sorted(out.items())), parent.data.tags
 
 
@@ -159,7 +165,7 @@ def fig_recommendation_mix(ev):
 
 
 def fig_fairness(ev):
-    fair = ev["fairness_by_gender"]
+    fair = ev["fairness"]["gender"] if "fairness" in ev else ev["fairness_by_gender"]
     actions = sorted(next(iter(fair.values()))["recommendation_share"])
     groups = [(f"{g.replace('_', ' ')} (n={f['n']:,})", f["recommendation_share"]) for g, f in fair.items()]
     fig, ax = plt.subplots(figsize=(6.5, 3.8))
@@ -282,7 +288,7 @@ def results_md(train, tags, ev, drift, retrain):
         lines.append(f"| {label(a)} | {c['observed_rate']:.3f} | {c['mean_calibrated_proba']:.3f} | {c['brier']:.4f} |")
     lines += ["", "## Fairness by gender (gender is not a model feature)", "",
               "| Group | n | Acceptance | AUC | Share recommended personal loan |", "|---|---|---|---|---|"]
-    for g, f in ev["fairness_by_gender"].items():
+    for g, f in (ev["fairness"]["gender"] if "fairness" in ev else ev["fairness_by_gender"]).items():
         lines.append(f"| {g.replace('_', ' ')} | {f['n']:,} | {f['acceptance_rate']:.3f} | "
                      f"{f['auc_logged_action']:.3f} | {f['recommendation_share'].get('Personal_Loan_Offer', 0):.1%} |")
     lines += ["", "## Drift (2025 training window vs Jan-Jun 2026)", "",

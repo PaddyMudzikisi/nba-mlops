@@ -1,0 +1,31 @@
+# The CSV stays at data/raw/mydata.csv (versioned by data/raw.dvc).
+name: mydata
+description: Pseudonymised retail-banking offers, Jan 2025 - Jun 2026
+path: data/raw/mydata.csv
+columns:
+  customer_key: customer_id_pseudo
+  offer_date: offer_date
+  action: offer_name
+  accepted: target_accepted
+  value: estimated_offer_value_usd
+  propensity: logged_propensity
+categorical:
+- offer_channel
+- age_band
+- employment_type
+- income_band
+- region
+- balance_band
+numeric:
+- contact_count
+- tenure_months
+- products_held_count
+- has_loan
+- has_card
+- txn_count_30d
+- txn_value_30d
+- salary_inflow_flag
+- mobile_logins_30d
+protected:
+- gender
+eligibility_column: consent_marketing

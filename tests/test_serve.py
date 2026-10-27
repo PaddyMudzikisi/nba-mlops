@@ -33,3 +33,13 @@ def test_bad_input_is_rejected(toy_policy, tmp_path):
     assert c.post("/recommend", json={"customer_key": "SYN1", "features": {"x": 1.0}}).status_code == 422
     assert c.post("/recommend", json={"customer_key": "SYN1",
                                       "features": {"x": 1.0, "band": "zzz"}}).status_code == 422
+
+
+def test_no_deployment_returns_503_until_reload(toy_policy, tmp_path):
+    holder = {"policy": None}
+    c = TestClient(create_app(None, tmp_path / "d.jsonl", loader=lambda: holder["policy"]))
+    assert c.get("/health").json()["status"] == "no model deployed"
+    assert c.post("/recommend", json={"customer_key": "SYN1", "features": {"x": 1.0, "band": "a"}}).status_code == 503
+    holder["policy"] = toy_policy
+    assert c.post("/reload").json()["train_run_id"] == "test-run"
+    assert c.post("/recommend", json={"customer_key": "SYN1", "features": {"x": 1.0, "band": "a"}}).status_code == 200

@@ -12,6 +12,7 @@ PSI = sum over bins of (cur - ref) * ln(cur / ref). Common reading: < 0.1 stable
 import argparse
 import json
 import tempfile
+from pathlib import Path
 
 import mlflow
 import numpy as np
@@ -47,7 +48,9 @@ def status(value, warn, alert):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True, help="parent training run whose models are monitored")
-    run_id = parser.parse_args().run_id
+    parser.add_argument("--out", default=str(REPORTS), help="folder for drift.json")
+    args = parser.parse_args()
+    run_id = args.run_id
 
     with tempfile.TemporaryDirectory() as tmp:
         params = load_params(mlflow.artifacts.download_artifacts(
@@ -59,7 +62,13 @@ def main():
     columns = {**{f: data[f] for f in policy.meta["features"]},
                **{f"score:{a}": proba[a] for a in policy.actions}}
 
-    in_ref = data.offer_date <= pd.Timestamp(params["split"]["train_end"])
+    # Reference window: the training period of a time split; for a random split
+    # the earliest 75% of dates (a random split has no time boundary of its own).
+    if params["split"].get("method", "time") == "time":
+        cutoff = pd.Timestamp(params["split"]["train_end"])
+    else:
+        cutoff = data.offer_date.quantile(0.75).normalize()
+    in_ref = data.offer_date <= cutoff
     month = data.offer_date.dt.to_period("M").astype(str)
     overall = {name: psi(s[in_ref], s[~in_ref]) for name, s in columns.items()}
     monthly = {m: {name: psi(s[in_ref], s[month == m]) for name, s in columns.items()}
@@ -78,19 +87,21 @@ def main():
 
     report = {
         "train_run_id": run_id,
+        "reference_end": str(cutoff.date()),
         "thresholds": {"warn": warn, "alert": alert},
         "psi": {name: {"value": v, "status": status(v, warn, alert)}
                 for name, v in sorted(overall.items(), key=lambda kv: -kv[1])},
         "psi_monthly": monthly,
     }
     report["outcome_drift"] = outcome
-    report["expected_trend"] = mon["expected_trend"]
+    report["expected_trend"] = mon.get("expected_trend", [])
     report["retrain_reasons"] = (
-        [f"PSI {n}" for n, v in report["psi"].items() if v["status"] == "alert" and n not in mon["expected_trend"]]
+        [f"PSI {n}" for n, v in report["psi"].items() if v["status"] == "alert" and n not in report["expected_trend"]]
         + [f"calibration gap {a}" for a, v in outcome.items() if v["status"] == "alert"])
     report["retrain_recommended"] = bool(report["retrain_reasons"])
-    REPORTS.mkdir(exist_ok=True)
-    (REPORTS / "drift.json").write_text(json.dumps(report, indent=2))
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "drift.json").write_text(json.dumps(report, indent=2))
 
     mlflow.set_experiment(params["mlflow"]["experiment"])
     with mlflow.start_run(run_name="monitor"):
@@ -102,7 +113,7 @@ def main():
 
     print(f"PSI, training window vs after (warn > {warn}, alert > {alert}):")
     for name, v in report["psi"].items():
-        note = "  (expected trend, not used for retrain)" if name in mon["expected_trend"] else ""
+        note = "  (expected trend, not used for retrain)" if name in report["expected_trend"] else ""
         print(f"  {name:36s} {v['value']:.4f}  {v['status']}{note}")
     print("\nOutcome drift (observed vs mean predicted acceptance):")
     for a, v in outcome.items():

@@ -4,6 +4,7 @@ n_jobs: 4
 # Input dataset: one row per offer made to a customer. "columns" maps the
 # pipeline's roles to the CSV's column names.
 dataset:
+  name: mydata
   path: data/raw/mydata.csv
   columns:
     customer_key: customer_id_pseudo
@@ -17,10 +18,20 @@ dataset:
             txn_count_30d, txn_value_30d, salary_inflow_flag, mobile_logins_30d]
   # Deliberately not features: gender (protected attribute, kept for fairness
   # checks) and consent_marketing (an eligibility rule, constant in this data).
+  protected: [gender]
+  eligibility_column: consent_marketing
 
-# Out-of-time split: train on offers up to this date, test on the rest.
+# method time: train on offers up to train_end, test on the rest (out-of-time).
+# method random: seeded split stratified on the outcome, test_size of each offer.
 split:
+  method: time
   train_end: "2025-12-31"
+  test_size: 0.2
+
+# Model family: xgboost, random_forest or logistic_regression; hyperparameters
+# are read from the section of the same name.
+model:
+  type: xgboost
 
 # Reweight positives by negatives/positives. Off: weighting inflated the
 # probabilities and the odds correction then under-predicted every action
@@ -38,6 +49,25 @@ xgboost:
   reg_lambda: 1.0
   tree_method: hist
   eval_metric: aucpr
+
+random_forest:
+  n_estimators: 300
+  max_depth: 8
+  min_samples_leaf: 5
+
+logistic_regression:
+  C: 1.0
+
+# Grid search on the training data only: time-ordered folds for a time split,
+# stratified folds for a random split. Off by default.
+tuning:
+  enabled: false
+  cv_folds: 3
+  scoring: average_precision
+  grid:
+    xgboost: {max_depth: [3, 4, 6], learning_rate: [0.03, 0.05, 0.1], n_estimators: [200, 400]}
+    random_forest: {max_depth: [6, 8, 12], min_samples_leaf: [2, 5, 10]}
+    logistic_regression: {C: [0.01, 0.1, 1.0, 10.0]}
 
 reproducibility:
   tolerance: 1.0e-6

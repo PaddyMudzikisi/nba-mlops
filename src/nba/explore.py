@@ -20,6 +20,7 @@ from matplotlib.ticker import PercentFormatter
 from scipy import stats
 
 from nba.config import REPO, load_params
+from nba.datasets import params_for
 from nba.eda import DIVERGING, association, ordered, pretty
 from nba.features import load_data
 from nba.report import BLUES, INK, INK2, NEUTRAL, SURFACE, label
@@ -31,8 +32,9 @@ SEQ = LinearSegmentedColormap.from_list("blues", BLUES)
 
 
 @st.cache_data
-def load():
-    params = load_params()
+def load(dataset=None):
+    """A registered dataset by name, or params.yaml's dataset."""
+    params = params_for(dataset) if dataset else load_params()
     data = load_data(params)
     data["month"] = data.offer_date.dt.to_period("M").astype(str)
     return params, data
@@ -270,30 +272,30 @@ def view_trend(df, cats):
     outputs(fig, table, slugify("trend", measure, split))
 
 
-def main():
-    st.set_page_config(page_title="NBA data explorer", layout="wide")
-    params, data = load()
+def explorer(params, data, title="NBA data explorer"):
     ds = params["dataset"]
-    cats = ["action"] + ds["categorical"] + ["gender"]
+    cats = ["action"] + ds["categorical"] + [c for c in ds.get("protected", ["gender"]) if c in data]
     nums = ds["numeric"]
 
     st.sidebar.header("Filters")
     offers = st.sidebar.multiselect("Offer", sorted(data.action.unique()), default=sorted(data.action.unique()),
                                     format_func=label)
-    channels = st.sidebar.multiselect("Channel", list(data.offer_channel.cat.categories),
-                                      default=list(data.offer_channel.cat.categories))
+    df = data[data.action.isin(offers)]
+    if "offer_channel" in data:
+        channels = st.sidebar.multiselect("Channel", list(data.offer_channel.cat.categories),
+                                          default=list(data.offer_channel.cat.categories))
+        df = df[df.offer_channel.isin(channels)]
     start, end = st.sidebar.slider("Date range", data.offer_date.min().date(), data.offer_date.max().date(),
                                    (data.offer_date.min().date(), data.offer_date.max().date()))
     extra = st.sidebar.selectbox("Also filter by", ["(none)"] + [c for c in cats if c not in ("action", "offer_channel")],
                                  format_func=lambda c: c if c == "(none)" else name(c))
-    df = data[data.action.isin(offers) & data.offer_channel.isin(channels)
-              & data.offer_date.dt.date.between(start, end)]
+    df = df[df.offer_date.dt.date.between(start, end)]
     if extra != "(none)":
         levels = sorted(df[extra].dropna().unique(), key=str)
         keep = st.sidebar.multiselect(name(extra), levels, default=levels, format_func=lambda v: value_name(extra, v))
         df = df[df[extra].isin(keep)]
 
-    st.title("NBA data explorer")
+    st.title(title)
     st.caption(f"{ds['path']} · {len(df):,} of {len(data):,} offers selected · "
                f"acceptance {df.accepted.mean():.1%}" if len(df) else "No offers match the filters.")
     if len(df) < 20:
@@ -316,4 +318,10 @@ def main():
         view_trend(df, cats)
 
 
-main()
+def main():
+    st.set_page_config(page_title="NBA data explorer", layout="wide")
+    explorer(*load())
+
+
+if __name__ == "__main__":
+    main()

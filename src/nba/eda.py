@@ -7,8 +7,10 @@ chi-square (+ Cramer's V) for categorical variables and Mann-Whitney U for
 numeric ones, overall and within each offer, with Benjamini-Hochberg
 adjustment across the within-offer tests.
 """
+import argparse
 import json
 import re
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -18,18 +20,14 @@ from matplotlib.colors import LinearSegmentedColormap
 from scipy import stats
 
 from nba.config import REPO, load_params
+from nba.datasets import params_for
+from nba.privacy import pattern_totals, scan
 from nba.features import load_data
 from nba.report import BLUES, GRID, INK, INK2, NEUTRAL, SERIES, SURFACE, label
 from nba.train import provenance
 
 OUT = REPO / "reports" / "eda"
 DIVERGING = LinearSegmentedColormap.from_list("div", [SERIES[1], "#f0efec", SERIES[0]])
-PII_PATTERNS = {
-    "email": r"[\w.+-]+@[\w-]+\.[\w.]+",
-    "phone": r"(?:\+?263|\b0)7\d{8}\b",
-    "national_id": r"\b\d{2}-?\d{6,7}-?[A-Z]-?\d{2}\b",
-    "long_digit_run": r"\b\d{10,}\b",
-}
 
 
 def save(fig, name):
@@ -46,17 +44,20 @@ def ordered(col, series):
     """Bands in their natural order (lowest at the bottom of a bar chart), others by value."""
     if not col.endswith("_band"):
         return series.sort_values()
-    start = lambda s: 0 if s.lower().startswith("under") else int(re.findall(r"\d+", s)[0])
+    def start(s):
+        digits = re.findall(r"\d+", s.replace(",", ""))
+        return (0, 0) if s.lower().startswith(("under", "<")) else ((1, int(digits[0])) if digits else (2, 0))
     return series.loc[sorted(series.index, key=lambda s: start(str(s)))]
 
 
 def data_quality(raw, data, ds):
     numeric = ds["numeric"]
-    q1, q3 = raw[numeric].quantile(0.25), raw[numeric].quantile(0.75)
+    values = data[numeric]  # coerced to numbers by load_data
+    q1, q3 = values.quantile(0.25), values.quantile(0.75)
     iqr = q3 - q1
-    outliers = ((raw[numeric] < q1 - 1.5 * iqr) | (raw[numeric] > q3 + 1.5 * iqr)).sum()
-    text = raw.select_dtypes("object").astype(str)
-    pii = {name: int(sum(text[c].str.contains(p, regex=True).sum() for c in text)) for name, p in PII_PATTERNS.items()}
+    outliers = ((values < q1 - 1.5 * iqr) | (values > q3 + 1.5 * iqr)).sum()
+    privacy = scan(raw)
+    pii = pattern_totals(privacy)
     ids = raw[ds["columns"]["customer_key"]].astype(str)
     return {
         "rows": int(len(raw)),
@@ -69,6 +70,7 @@ def data_quality(raw, data, ds):
         "duplicate_offer_keys": int(data.offer_id.duplicated().sum()),
         "iqr_outliers": {c: int(v) for c, v in outliers.items()},
         "pii_pattern_matches": pii,
+        "sensitive_column_names": privacy["sensitive_columns"],
         "pseudonymous_ids": bool(ids.str.fullmatch(r"SYN\d+").all()),
         "overall_acceptance_rate": float(data.accepted.mean()),
     }
@@ -293,11 +295,18 @@ def write_md(quality, overall, within, corr, actions, variables, ds):
 
 
 def main():
-    params = load_params()
+    global OUT
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", help="registered dataset name (default: params.yaml's dataset)")
+    parser.add_argument("--out", help="output folder (default: reports/eda)")
+    args = parser.parse_args()
+    params = params_for(args.dataset) if args.dataset else load_params()
+    if args.out:
+        OUT = Path(args.out)
     ds = params["dataset"]
     raw = pd.read_csv(REPO / ds["path"])
     data = load_data(params)
-    categorical = ds["categorical"] + ["gender"]
+    categorical = ds["categorical"] + [c for c in ds.get("protected", ["gender"]) if c in data]
     numeric = ds["numeric"]
     actions = sorted(data.action.unique())
 
@@ -326,7 +335,7 @@ def main():
 
     mlflow.set_experiment(params["mlflow"]["experiment"])
     with mlflow.start_run(run_name="eda"):
-        mlflow.set_tags(provenance(params))
+        mlflow.set_tags({**provenance(params), "dataset": ds.get("name", "default")})
         mlflow.log_artifacts(str(OUT), artifact_path="eda")
 
     sig = [(a, v) for a, v in flat if within[a][v]["p_bh"] < 0.05]

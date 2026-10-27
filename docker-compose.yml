@@ -39,7 +39,7 @@ services:
   # Scoring API: make serve RUN_ID=<parent run id>
   api:
     image: nba-mlops:0.3.0
-    profiles: ["serve"]
+    profiles: ["serve", "portal"]
     working_dir: /app
     command: uvicorn --factory nba.serve:from_env --host 0.0.0.0 --port 8000
     ports:
@@ -55,19 +55,25 @@ services:
       mlflow:
         condition: service_healthy
 
-  # Interactive EDA explorer: make explore
-  explore:
+  # Portal (upload, explore, train, validate, deploy): make portal
+  portal:
     image: nba-mlops:0.3.0
-    profiles: ["explore"]
+    profiles: ["portal"]
     working_dir: /app
-    command: streamlit run src/nba/explore.py --server.address 0.0.0.0 --server.port 8501 --server.headless true --browser.gatherUsageStats false
+    command: streamlit run src/nba/portal/Home.py --server.address 0.0.0.0 --server.port 8501 --server.headless true --browser.gatherUsageStats false --server.maxUploadSize 500
     ports:
       - "127.0.0.1:8501:8501"   # localhost only
     volumes:
       - .:/app
+      - ${HOME}/nba-mlops-dvcstore:/dvcstore
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      IMAGE_ID: ${IMAGE_ID:-unknown}
+      API_URL: http://api:8000
     restart: unless-stopped
+    depends_on:
+      mlflow:
+        condition: service_healthy
 
 volumes:
   mlflow-data:

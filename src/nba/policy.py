@@ -4,6 +4,8 @@ import mlflow
 import numpy as np
 import pandas as pd
 
+from nba.models import load_model
+
 
 def calibrate(proba, scale_pos_weight):
     """Undo scale_pos_weight. Weighting positives by w multiplies the fitted odds
@@ -21,13 +23,13 @@ class Policy:
     @classmethod
     def from_run(cls, run_id):
         meta = mlflow.artifacts.load_dict(f"runs:/{run_id}/policy.json")
-        models = {a: mlflow.xgboost.load_model(m["model_uri"]) for a, m in meta["actions"].items()}
+        models = {a: load_model(m["model_uri"], m.get("flavor", "xgboost")) for a, m in meta["actions"].items()}
         return cls(meta, models)
 
     def encode(self, frame):
         X = frame[self.meta["features"]].copy()
         for col, categories in self.meta["categories"].items():
-            X[col] = pd.Categorical(X[col], categories=categories)
+            X[col] = pd.Categorical(X[col].astype("string").fillna("missing"), categories=categories)
         return X
 
     def score(self, frame):
@@ -41,8 +43,10 @@ class Policy:
         return proba, proba * values
 
     def recommend(self, frame):
-        """Best action per row; NaN where the customer has not consented to marketing."""
+        """Best action per row; NaN where the eligibility column (e.g. marketing consent) is not 1."""
         _, ev = self.score(frame)
         best = ev.idxmax(axis=1)
-        consented = frame["consent_marketing"] == 1 if "consent_marketing" in frame else True
-        return best.where(consented, np.nan)
+        # Policies recorded before the column was configurable used consent_marketing.
+        col = self.meta.get("eligibility_column", "consent_marketing")
+        eligible = frame[col] == 1 if col and col in frame else True
+        return best.where(eligible, np.nan)
