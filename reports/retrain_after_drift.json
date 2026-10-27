@@ -1,0 +1,96 @@
+{
+  "champion_train_end": "2025-12-31",
+  "challenger_train_end": "2026-03-31",
+  "results": {
+    "Debit_Card_Activation": {
+      "champion": {
+        "n": 281,
+        "auc": 0.6158438910732489,
+        "brier": 0.18841869718131285,
+        "mean_predicted": 0.22303201258182526,
+        "observed_rate": 0.22419928825622776,
+        "relative_gap": 0.005233668749566878
+      },
+      "challenger": {
+        "n": 281,
+        "auc": 0.6080530071355759,
+        "brier": 0.18149994075020462,
+        "mean_predicted": 0.19407229125499725,
+        "observed_rate": 0.22419928825622776,
+        "relative_gap": 0.15523595257421774
+      }
+    },
+    "Fixed_Deposit_Offer": {
+      "champion": {
+        "n": 506,
+        "auc": 0.7505617977528088,
+        "brier": 0.09589544291195728,
+        "mean_predicted": 0.11203521490097046,
+        "observed_rate": 0.12055335968379446,
+        "relative_gap": 0.07603095857274256
+      },
+      "challenger": {
+        "n": 506,
+        "auc": 0.7798857984895929,
+        "brier": 0.09664637192977582,
+        "mean_predicted": 0.10377968847751617,
+        "observed_rate": 0.12055335968379446,
+        "relative_gap": 0.16162768892789936
+      }
+    },
+    "Mobile_Banking_Activation": {
+      "champion": {
+        "n": 279,
+        "auc": 0.5998593530239099,
+        "brier": 0.14274508374165892,
+        "mean_predicted": 0.16865921020507812,
+        "observed_rate": 0.15053763440860216,
+        "relative_gap": -0.10744492266056127
+      },
+      "challenger": {
+        "n": 279,
+        "auc": 0.6220614828209765,
+        "brier": 0.13460960570357108,
+        "mean_predicted": 0.16363881528377533,
+        "observed_rate": 0.15053763440860216,
+        "relative_gap": -0.08006157250927093
+      }
+    },
+    "Personal_Loan_Offer": {
+      "champion": {
+        "n": 330,
+        "auc": 0.7368788032454362,
+        "brier": 0.13419086181240025,
+        "mean_predicted": 0.13798557221889496,
+        "observed_rate": 0.17575757575757575,
+        "relative_gap": 0.2737387897247747
+      },
+      "challenger": {
+        "n": 330,
+        "auc": 0.7452459432048681,
+        "brier": 0.13559502963339531,
+        "mean_predicted": 0.15821512043476105,
+        "observed_rate": 0.17575757575757575,
+        "relative_gap": 0.11087723647783854
+      }
+    },
+    "Savings_Account_Upsell": {
+      "champion": {
+        "n": 661,
+        "auc": 0.6298963615088873,
+        "brier": 0.16912380305050284,
+        "mean_predicted": 0.13064807653427124,
+        "observed_rate": 0.20726172465960666,
+        "relative_gap": 0.586412369456035
+      },
+      "challenger": {
+        "n": 661,
+        "auc": 0.6459993313645734,
+        "brier": 0.16302245683225328,
+        "mean_predicted": 0.16417169570922852,
+        "observed_rate": 0.20726172465960666,
+        "relative_gap": 0.26246929328607727
+      }
+    }
+  }
+}

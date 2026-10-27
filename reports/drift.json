@@ -1,5 +1,5 @@
 {
-  "train_run_id": "0cf9061c812544c6b8c33144c0c6a432",
+  "train_run_id": "f0e62fe514ab4f4ca7287a1e30b5188c",
   "thresholds": {
     "warn": 0.1,
     "alert": 0.25
@@ -220,5 +220,48 @@
       "score:Savings_Account_Upsell": 0.031011376309260263
     }
   },
+  "outcome_drift": {
+    "Debit_Card_Activation": {
+      "n": 561,
+      "observed_rate": 0.20320855614973263,
+      "mean_predicted": 0.21492762863636017,
+      "relative_gap": -0.05452566783052004,
+      "status": "ok"
+    },
+    "Fixed_Deposit_Offer": {
+      "n": 1012,
+      "observed_rate": 0.12351778656126482,
+      "mean_predicted": 0.11571455746889114,
+      "relative_gap": 0.06743515477273898,
+      "status": "ok"
+    },
+    "Mobile_Banking_Activation": {
+      "n": 513,
+      "observed_rate": 0.15594541910331383,
+      "mean_predicted": 0.17316895723342896,
+      "relative_gap": -0.09946088724723379,
+      "status": "ok"
+    },
+    "Personal_Loan_Offer": {
+      "n": 641,
+      "observed_rate": 0.18876755070202808,
+      "mean_predicted": 0.15113039314746857,
+      "relative_gap": 0.24903764736345457,
+      "status": "warn"
+    },
+    "Savings_Account_Upsell": {
+      "n": 1393,
+      "observed_rate": 0.2096195262024408,
+      "mean_predicted": 0.13651937246322632,
+      "relative_gap": 0.5354562683688366,
+      "status": "alert"
+    }
+  },
+  "expected_trend": [
+    "contact_count"
+  ],
+  "retrain_reasons": [
+    "calibration gap Savings_Account_Upsell"
+  ],
   "retrain_recommended": true
 }
