@@ -54,6 +54,7 @@ Requires Docker Desktop.
 make build                 # build the pinned image
 make up                    # start MLflow on http://localhost:5001
 make data                  # after adding/changing data/raw: dvc add + dvc push
+make eda                   # Chapter 3 data understanding -> reports/eda/eda.md and figures
 git commit ...             # commit first, so the run is tied to an exact commit
 make train                 # trains all offer models; prints the parent run id
 make reproduce RUN_ID=...  # retrain from the recorded params and compare predictions
