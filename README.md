@@ -43,9 +43,27 @@ All services run in Docker on one machine, from a single pinned image
 | MLflow server, http://localhost:5001 | experiments, artefacts, model registry (`nba_<offer>`) |
 | Job container (`make train` etc.) | training, reproduction, evaluation, monitoring, reports |
 | Scoring API, http://localhost:8000 | `POST /recommend`, decision log with run and model versions |
-| EDA explorer, http://localhost:8501 | interactive charts, cross-tabs, correlations and tests on the filtered data |
+| Portal, http://localhost:8501 | upload, explore, train, validate and deploy from the browser |
 
 MLflow is on port 5001 because macOS AirPlay Receiver occupies 5000.
+
+## The portal
+
+`make portal`, then open http://localhost:8501. Every page drives the same
+tested pipeline code as the commands below; nothing runs only in the browser.
+
+| Page | What you do |
+|---|---|
+| 1 · Data | Upload a CSV. It is scanned for personal data (blocked if found), you map its columns to the roles (customer key, date, offer, outcome, optional value and propensity) and choose features, protected attributes and an eligibility column; it is saved under `data/datasets/<name>/` and versioned with DVC. |
+| 2 · Explore | Interactive EDA on the dataset, and the standard EDA report as a job. |
+| 3 · Train | Out-of-time or random split (e.g. 60/40), features, XGBoost / random forest / logistic regression with their settings, class weighting, optional grid search on the training data only. Runs in the background. |
+| 4 · Results | Train vs test accuracy, precision, recall, F1, ROC-AUC, PR-AUC and Brier per offer (overfitting gap), feature importance, tuning results, comparison of runs. |
+| 5 · Validate | Reproducibility test, policy evaluation with fairness (direct method when the data has no propensities), drift monitoring. |
+| 6 · Deploy | Deployment gate (finished, committed code, reproducibility passed), sets the registry alias `production`, the API reloads, try a recommendation, decision log. |
+
+Each portal run records its full parameter set, so it can be reproduced and
+compared like any other run. Runs started while code is uncommitted can be
+inspected but not deployed.
 
 ## Running it
 
@@ -56,7 +74,7 @@ make build                 # build the pinned image
 make up                    # start MLflow on http://localhost:5001
 make data                  # after adding/changing data/raw: dvc add + dvc push
 make eda                   # Chapter 3 data understanding -> reports/eda/eda.md and figures
-make explore               # interactive EDA explorer on http://localhost:8501
+make portal                # portal on http://localhost:8501 (also starts MLflow and the API)
 git commit ...             # commit first, so the run is tied to an exact commit
 make train                 # trains all offer models; prints the parent run id
 make reproduce RUN_ID=...  # retrain from the recorded params and compare predictions
@@ -64,7 +82,7 @@ make evaluate RUN_ID=...   # off-policy value, calibration, fairness -> reports/
 make monitor RUN_ID=...    # data and outcome drift -> reports/drift.json
 docker compose run --rm --no-deps app python experiments/retrain_after_drift.py
 make report                # figures and reports/results.md
-make serve RUN_ID=...      # scoring API on http://localhost:8000
+make serve                 # scoring API on http://localhost:8000 (deployed run; RUN_ID=... to pin one)
 make test                  # unit tests (toy data; no dataset or MLflow needed)
 make down                  # stop MLflow and the API
 ```

@@ -61,6 +61,10 @@ else:
                   "direct method (model-based; the dataset has no logged propensities)"))
     st.dataframe(pd.DataFrame(rows).style.format({"value per offer": "{:.2f}", "acceptance rate": "{:.1%}"}),
                  hide_index=True, width="stretch")
+    if h == "DM":
+        st.caption("Direct-method intervals reflect sampling variation only, not errors in the models' own "
+                   "probabilities, so treat them as optimistic. Without a value column, value per offer equals "
+                   "the acceptance rate.")
     if ev.get("propensity_check_mean_uniform_weight") is not None:
         st.caption(f"Propensity check: mean weight under a uniform policy = "
                    f"{ev['propensity_check_mean_uniform_weight']:.3f} (1.0 if the logged propensities are consistent).")
