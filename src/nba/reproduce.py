@@ -14,7 +14,8 @@ import pandas as pd
 from mlflow.tracking import MlflowClient
 
 from nba.config import load_params
-from nba.train import fit_action, load_data, provenance
+from nba.features import load_data
+from nba.train import fit_action, provenance
 
 
 def main():
@@ -25,12 +26,12 @@ def main():
     client = MlflowClient()
     parent = client.get_run(run_id)
     recorded = parent.data.tags
-    current = provenance()
 
     with tempfile.TemporaryDirectory() as tmp:
         params = load_params(mlflow.artifacts.download_artifacts(
             run_id=run_id, artifact_path="params.yaml", dst_path=tmp))
     tolerance = float(params["reproducibility"]["tolerance"])
+    current = provenance(params)
 
     print("Artefact checks (recorded vs now):")
     for key in ["data_sha256", "git_commit", "image_id", "platform", "xgboost"]:
@@ -41,7 +42,7 @@ def main():
 
     children = client.search_runs([parent.info.experiment_id],
                                   filter_string=f"tags.mlflow.parentRunId = '{run_id}'")
-    customers, offers = load_data()
+    data = load_data(params)
     results = {}
     for child in children:
         action = child.data.tags["action"]
@@ -49,7 +50,7 @@ def main():
             original = pd.read_csv(mlflow.artifacts.download_artifacts(
                 run_id=child.info.run_id, artifact_path="test_predictions.csv", dst_path=tmp),
                 float_precision="round_trip")
-        _, _, test, proba = fit_action(customers, offers, action, params)
+        _, _, test, proba = fit_action(data, action, params)
         regenerated = pd.DataFrame({"offer_id": test.offer_id.to_numpy(), "proba_new": proba})
         merged = original.merge(regenerated, on="offer_id", how="outer", validate="1:1")
         if merged.isna().any().any():
@@ -60,7 +61,7 @@ def main():
     passed = all(diff <= tolerance for diff in results.values())
     print(f"\nPrediction comparison (tolerance {tolerance:g}):")
     for action, diff in sorted(results.items()):
-        print(f"  {action:16s} max |diff| = {diff:.3g}  {'PASS' if diff <= tolerance else 'FAIL'}")
+        print(f"  {action:26s} max |diff| = {diff:.3g}  {'PASS' if diff <= tolerance else 'FAIL'}")
 
     mlflow.set_experiment(params["mlflow"]["experiment"])
     with mlflow.start_run(run_name="reproduce"):

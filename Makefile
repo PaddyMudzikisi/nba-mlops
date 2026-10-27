@@ -13,9 +13,9 @@ up:         ## start the MLflow server on http://localhost:5000
 down:
 	docker compose down
 
-data:       ## generate synthetic data and version it with DVC
-	$(JOB) python -m nba.generate_synthetic
+data:       ## version data/raw with DVC (after adding or changing the dataset)
 	$(JOB) dvc add data/raw
+	$(JOB) dvc push
 
 train:      ## train all action models (commit first so the run is tied to a commit)
 	$(JOB) python -m nba.train

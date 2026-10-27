@@ -13,19 +13,19 @@ import sklearn
 import xgboost as xgb
 from sklearn.metrics import average_precision_score, roc_auc_score
 
-from nba.config import CUSTOMERS_PATH, OFFERS_PATH, PARAMS_PATH, REPO, load_params
-from nba.features import FEATURES, build_action_frame, dataset_sha256
+from nba.config import PARAMS_PATH, REPO, load_params
+from nba.features import build_action_frame, dataset_sha256, features, load_data
 
 
 def git(*args):
     return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True).stdout.strip()
 
 
-def provenance():
+def provenance(params):
     return {
         "git_commit": git("rev-parse", "HEAD") or "none",
         "git_dirty": str(bool(git("status", "--porcelain", "--untracked-files=no"))),
-        "data_sha256": dataset_sha256(CUSTOMERS_PATH, OFFERS_PATH),
+        "data_sha256": dataset_sha256(REPO / params["dataset"]["path"]),
         "image_id": os.environ.get("IMAGE_ID", "unknown"),
         "platform": platform.machine(),
         "python": platform.python_version(),
@@ -36,12 +36,9 @@ def provenance():
     }
 
 
-def load_data():
-    return pd.read_parquet(CUSTOMERS_PATH), pd.read_parquet(OFFERS_PATH)
-
-
-def fit_action(customers, offers, action, params):
-    frame = build_action_frame(customers, offers, action)
+def fit_action(data, action, params):
+    frame = build_action_frame(data, action)
+    X = features(params)
     in_train = frame.offer_date <= pd.Timestamp(params["split"]["train_end"])
     train, test = frame[in_train], frame[~in_train]
 
@@ -54,8 +51,8 @@ def fit_action(customers, offers, action, params):
         n_jobs=params["n_jobs"],
         enable_categorical=True,
     )
-    model.fit(train[FEATURES], y_train)
-    proba = model.predict_proba(test[FEATURES])[:, 1]
+    model.fit(train[X], y_train)
+    proba = model.predict_proba(test[X])[:, 1]
     return model, train, test, proba
 
 
@@ -67,11 +64,11 @@ def mean_abs_shap(model, X):
 
 def main():
     params = load_params()
-    customers, offers = load_data()
+    data = load_data(params)
     mlflow.set_experiment(params["mlflow"]["experiment"])
 
     with mlflow.start_run(run_name="train") as parent:
-        prov = provenance()
+        prov = provenance(params)
         mlflow.set_tags(prov)
         mlflow.log_artifact(str(PARAMS_PATH))
         mlflow.log_params({"seed": params["seed"], "train_end": params["split"]["train_end"],
@@ -79,9 +76,9 @@ def main():
         if prov["git_dirty"] == "True":
             print("WARNING: uncommitted changes; this run cannot be tied to an exact commit.")
 
-        for action in params["actions"]:
+        for action in sorted(data.action.unique()):
             with mlflow.start_run(run_name=action, nested=True):
-                model, train, test, proba = fit_action(customers, offers, action, params)
+                model, train, test, proba = fit_action(data, action, params)
                 y_test = test.accepted
                 metrics = {
                     "roc_auc": roc_auc_score(y_test, proba),
@@ -93,7 +90,7 @@ def main():
                 }
                 mlflow.set_tags({"action": action, **prov})
                 mlflow.log_metrics(metrics)
-                mlflow.log_dict(mean_abs_shap(model, test[FEATURES]), "shap_mean_abs.json")
+                mlflow.log_dict(mean_abs_shap(model, test[features(params)]), "shap_mean_abs.json")
                 with tempfile.TemporaryDirectory() as tmp:
                     path = Path(tmp) / "test_predictions.csv"
                     pd.DataFrame({"offer_id": test.offer_id, "proba": proba}).to_csv(
@@ -101,7 +98,7 @@ def main():
                     mlflow.log_artifact(str(path))
                 mlflow.xgboost.log_model(model, artifact_path="model",
                                          registered_model_name=f"nba_{action}")
-                print(f"{action:16s} ROC-AUC {metrics['roc_auc']:.3f}  PR-AUC {metrics['pr_auc']:.3f}  "
+                print(f"{action:26s} ROC-AUC {metrics['roc_auc']:.3f}  PR-AUC {metrics['pr_auc']:.3f}  "
                       f"test n={metrics['n_test']:,}")
 
         print(f"\nParent run id: {parent.info.run_id}")

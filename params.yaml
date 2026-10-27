@@ -1,23 +1,26 @@
 seed: 42
 n_jobs: 4
 
-data:
-  n_customers: 20000
-  start: "2025-01-01"
-  months: 12
+# Input dataset: one row per offer made to a customer. "columns" maps the
+# pipeline's roles to the CSV's column names.
+dataset:
+  path: data/raw/mydata.csv
+  columns:
+    customer_key: customer_id_pseudo
+    offer_date: offer_date
+    action: offer_name
+    accepted: target_accepted
+    value: estimated_offer_value_usd   # reward for expected-value ranking, not a feature
+    propensity: logged_propensity      # logging policy, for off-policy evaluation only
+  categorical: [offer_channel, age_band, employment_type, income_band, region, balance_band]
+  numeric: [contact_count, tenure_months, products_held_count, has_loan, has_card,
+            txn_count_30d, txn_value_30d, salary_inflow_flag, mobile_logins_30d]
+  # Deliberately not features: gender (protected attribute, kept for fairness
+  # checks) and consent_marketing (an eligibility rule, constant in this data).
 
 # Out-of-time split: train on offers up to this date, test on the rest.
 split:
-  train_end: "2025-09-30"
-
-# Action catalogue. value/cost are placeholder unit values for the
-# expected-value ranking; replace with figures agreed with the business.
-actions:
-  savings_upgrade: {value: 15, cost: 1}
-  personal_loan:   {value: 120, cost: 3}
-  credit_card:     {value: 60, cost: 2}
-  fixed_deposit:   {value: 40, cost: 1}
-  digital_enrol:   {value: 10, cost: 0.5}
+  train_end: "2025-12-31"
 
 xgboost:
   n_estimators: 300
