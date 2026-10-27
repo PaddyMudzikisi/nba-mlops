@@ -105,12 +105,15 @@ def main():
     # E[1 / p] = number of actions, so the mean weight under a uniform policy is 1.
     propensity_check = float((1 / len(actions) / test.propensity).mean())
 
-    results = {}
+    results, acceptance = {}, {}
     for name, target in targets.items():
         w, r, contrib = ope_contributions(target, test.action, reward, test.propensity, q)
         results[name] = {**estimate(w, r, contrib, args.n_boot, params["seed"]),
                          "matched_offers": int((w > 0).sum()),
                          "effective_sample_size": float(w.sum() ** 2 / (w ** 2).sum())}
+        # Same policies, judged on acceptance rate instead of value.
+        w, r, contrib = ope_contributions(target, test.action, test.accepted, test.propensity, proba)
+        acceptance[name] = estimate(w, r, contrib, args.n_boot, params["seed"])
     logged = np.random.default_rng(params["seed"]).integers(0, len(test), size=(args.n_boot, len(test)))
     logged_dist = reward.to_numpy()[logged].mean(axis=1)
     results["Logged (bank's actual offers)"] = {"observed": float(reward.mean()),
@@ -131,6 +134,8 @@ def main():
         "test_period": [str(test.offer_date.min().date()), str(test.offer_date.max().date())],
         "n_test_offers": int(len(test)),
         "policy_value_per_offer_usd": results,
+        "policy_acceptance_rate": acceptance,
+        "logged_acceptance_rate": float(test.accepted.mean()),
         "recommendation_share": {
             "NBA": recommended.value_counts(normalize=True).round(4).to_dict(),
             "Logged": test.action.value_counts(normalize=True).round(4).to_dict(),
@@ -159,6 +164,9 @@ def main():
         cells = "  ".join(f"{k} {res[k]['value']:6.2f} [{res[k]['ci_low']:.2f}, {res[k]['ci_high']:.2f}]"
                           for k in ["IPS", "SNIPS", "DR"])
         print(f"  {name:30s} {cells}  matched={res['matched_offers']}")
+    print(f"\nAcceptance rate, DR (logged observed {test.accepted.mean():.3f}):")
+    for name, res in acceptance.items():
+        print(f"  {name:30s} {res['DR']['value']:.3f} [{res['DR']['ci_low']:.3f}, {res['DR']['ci_high']:.3f}]")
     print("\nCalibration (observed vs mean predicted, raw -> calibrated):")
     for a, c in calibration.items():
         print(f"  {a:26s} {c['observed_rate']:.3f}  {c['mean_raw_proba']:.3f} -> {c['mean_calibrated_proba']:.3f}"

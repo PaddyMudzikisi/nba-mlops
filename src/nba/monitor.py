@@ -1,6 +1,10 @@
-"""Drift monitoring: Population Stability Index (PSI) of each feature and each
-model score, comparing the training window (reference) with the period after it
-(current), overall and month by month.
+"""Drift monitoring, comparing the training window (reference) with the period
+after it (current):
+
+- data drift: Population Stability Index (PSI) of each feature and each model
+  score, overall and month by month;
+- outcome drift: observed vs mean predicted acceptance per action, which catches
+  changes in how customers respond that feature PSI cannot see.
 
 PSI = sum over bins of (cur - ref) * ln(cur / ref). Common reading: < 0.1 stable,
 0.1-0.25 moderate shift, > 0.25 significant shift (retrain recommended).
@@ -61,6 +65,17 @@ def main():
     monthly = {m: {name: psi(s[in_ref], s[month == m]) for name, s in columns.items()}
                for m in sorted(month[~in_ref].unique())}
 
+    mon = params["monitoring"]
+    current = data[~in_ref]
+    outcome = {}
+    for a in policy.actions:
+        rows = current[current.action == a]
+        observed, predicted = rows.accepted.mean(), proba.loc[rows.index, a].mean()
+        gap = observed / predicted - 1
+        outcome[a] = {"n": int(len(rows)), "observed_rate": float(observed), "mean_predicted": float(predicted),
+                      "relative_gap": float(gap),
+                      "status": status(abs(gap), mon["calibration_gap_warn"], mon["calibration_gap_alert"])}
+
     report = {
         "train_run_id": run_id,
         "thresholds": {"warn": warn, "alert": alert},
@@ -68,7 +83,12 @@ def main():
                 for name, v in sorted(overall.items(), key=lambda kv: -kv[1])},
         "psi_monthly": monthly,
     }
-    report["retrain_recommended"] = any(v["status"] == "alert" for v in report["psi"].values())
+    report["outcome_drift"] = outcome
+    report["expected_trend"] = mon["expected_trend"]
+    report["retrain_reasons"] = (
+        [f"PSI {n}" for n, v in report["psi"].items() if v["status"] == "alert" and n not in mon["expected_trend"]]
+        + [f"calibration gap {a}" for a, v in outcome.items() if v["status"] == "alert"])
+    report["retrain_recommended"] = bool(report["retrain_reasons"])
     REPORTS.mkdir(exist_ok=True)
     (REPORTS / "drift.json").write_text(json.dumps(report, indent=2))
 
@@ -77,14 +97,19 @@ def main():
         mlflow.set_tags({"monitors": run_id, "retrain_recommended": str(report["retrain_recommended"]),
                          **provenance(params)})
         mlflow.log_metrics({f"psi_{n.replace(':', '_')}": v for n, v in overall.items()})
+        mlflow.log_metrics({f"calibration_gap_{a}": v["relative_gap"] for a, v in outcome.items()})
         mlflow.log_dict(report, "drift.json")
 
     print(f"PSI, training window vs after (warn > {warn}, alert > {alert}):")
     for name, v in report["psi"].items():
-        print(f"  {name:36s} {v['value']:.4f}  {v['status']}")
+        note = "  (expected trend, not used for retrain)" if name in mon["expected_trend"] else ""
+        print(f"  {name:36s} {v['value']:.4f}  {v['status']}{note}")
+    print("\nOutcome drift (observed vs mean predicted acceptance):")
+    for a, v in outcome.items():
+        print(f"  {a:26s} {v['observed_rate']:.3f} vs {v['mean_predicted']:.3f}  gap {v['relative_gap']:+.0%}  {v['status']}")
     worst = max(max(m.values()) for m in monthly.values())
     print(f"\nWorst single-month PSI: {worst:.4f}")
-    print("Retrain recommended:", report["retrain_recommended"])
+    print("Retrain recommended:", report["retrain_recommended"], report["retrain_reasons"])
 
 
 if __name__ == "__main__":

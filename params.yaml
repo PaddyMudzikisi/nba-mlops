@@ -46,6 +46,13 @@ reproducibility:
 monitoring:
   psi_warn: 0.1
   psi_alert: 0.25
+  # Relative gap between observed and mean predicted acceptance per action in
+  # the monitored window; PSI on features cannot see changes in response.
+  calibration_gap_warn: 0.1
+  calibration_gap_alert: 0.25
+  # Reported but not used for the retrain decision: cumulative counters grow
+  # over time by construction.
+  expected_trend: [contact_count]
 
 mlflow:
   experiment: nba

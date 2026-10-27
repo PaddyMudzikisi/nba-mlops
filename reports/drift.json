@@ -1,0 +1,224 @@
+{
+  "train_run_id": "0cf9061c812544c6b8c33144c0c6a432",
+  "thresholds": {
+    "warn": 0.1,
+    "alert": 0.25
+  },
+  "psi": {
+    "contact_count": {
+      "value": 1.0762880960610146,
+      "status": "alert"
+    },
+    "txn_count_30d": {
+      "value": 0.23580885979674554,
+      "status": "warn"
+    },
+    "txn_value_30d": {
+      "value": 0.12534279189415268,
+      "status": "warn"
+    },
+    "tenure_months": {
+      "value": 0.06434532636877408,
+      "status": "ok"
+    },
+    "score:Personal_Loan_Offer": {
+      "value": 0.02168176850396971,
+      "status": "ok"
+    },
+    "score:Savings_Account_Upsell": {
+      "value": 0.01819754828417801,
+      "status": "ok"
+    },
+    "score:Fixed_Deposit_Offer": {
+      "value": 0.01746290794193376,
+      "status": "ok"
+    },
+    "score:Debit_Card_Activation": {
+      "value": 0.008060986507400444,
+      "status": "ok"
+    },
+    "products_held_count": {
+      "value": 0.007032409862683636,
+      "status": "ok"
+    },
+    "age_band": {
+      "value": 0.005000140072087665,
+      "status": "ok"
+    },
+    "region": {
+      "value": 0.00470401075769105,
+      "status": "ok"
+    },
+    "mobile_logins_30d": {
+      "value": 0.0022186424761289725,
+      "status": "ok"
+    },
+    "score:Mobile_Banking_Activation": {
+      "value": 0.0016809643564472472,
+      "status": "ok"
+    },
+    "employment_type": {
+      "value": 0.001507298145223365,
+      "status": "ok"
+    },
+    "balance_band": {
+      "value": 0.0010568478297471814,
+      "status": "ok"
+    },
+    "offer_channel": {
+      "value": 0.00020529689631249972,
+      "status": "ok"
+    },
+    "income_band": {
+      "value": 0.00020471854483506639,
+      "status": "ok"
+    },
+    "has_loan": {
+      "value": 0.0,
+      "status": "ok"
+    },
+    "has_card": {
+      "value": 0.0,
+      "status": "ok"
+    },
+    "salary_inflow_flag": {
+      "value": 0.0,
+      "status": "ok"
+    }
+  },
+  "psi_monthly": {
+    "2026-01": {
+      "offer_channel": 0.002432509964425366,
+      "age_band": 0.00268219054397968,
+      "employment_type": 0.004121687041452806,
+      "income_band": 0.010517104476190772,
+      "region": 0.015940660994347825,
+      "balance_band": 0.02315811904921209,
+      "contact_count": 0.6758453322354193,
+      "tenure_months": 0.035121279252410945,
+      "products_held_count": 0.018812890315923664,
+      "has_loan": 0.0,
+      "has_card": 0.0,
+      "txn_count_30d": 0.03383107062337756,
+      "txn_value_30d": 0.011336702059720906,
+      "salary_inflow_flag": 0.0,
+      "mobile_logins_30d": 0.023236935943516713,
+      "score:Debit_Card_Activation": 0.018195975159333654,
+      "score:Fixed_Deposit_Offer": 0.025487097160010144,
+      "score:Mobile_Banking_Activation": 0.016335352852428046,
+      "score:Personal_Loan_Offer": 0.011423136495161924,
+      "score:Savings_Account_Upsell": 0.01513561895447496
+    },
+    "2026-02": {
+      "offer_channel": 0.0029409919726785085,
+      "age_band": 0.011970131150732607,
+      "employment_type": 0.017534057776405224,
+      "income_band": 0.003025976040213796,
+      "region": 0.01917606746439615,
+      "balance_band": 0.008150507960928696,
+      "contact_count": 0.9674419590754406,
+      "tenure_months": 0.038557880681408904,
+      "products_held_count": 0.003450873731115878,
+      "has_loan": 0.0,
+      "has_card": 0.0,
+      "txn_count_30d": 0.45109126542127664,
+      "txn_value_30d": 0.1996582089156396,
+      "salary_inflow_flag": 0.0,
+      "mobile_logins_30d": 0.004549914906503827,
+      "score:Debit_Card_Activation": 0.027677326057788585,
+      "score:Fixed_Deposit_Offer": 0.04565993420924603,
+      "score:Mobile_Banking_Activation": 0.01597825977352642,
+      "score:Personal_Loan_Offer": 0.04573383015231959,
+      "score:Savings_Account_Upsell": 0.06546726825847758
+    },
+    "2026-03": {
+      "offer_channel": 0.008197956165643984,
+      "age_band": 0.014761488550710447,
+      "employment_type": 0.006715485344802211,
+      "income_band": 0.0029252593009432143,
+      "region": 0.014832659649608292,
+      "balance_band": 0.0037063941348447747,
+      "contact_count": 0.9757720686336194,
+      "tenure_months": 0.06017623550567547,
+      "products_held_count": 0.0034959145035116813,
+      "has_loan": 0.0,
+      "has_card": 0.0,
+      "txn_count_30d": 0.35392507768295123,
+      "txn_value_30d": 0.17962872433766824,
+      "salary_inflow_flag": 0.0,
+      "mobile_logins_30d": 0.005381908861285886,
+      "score:Debit_Card_Activation": 0.02282430063231931,
+      "score:Fixed_Deposit_Offer": 0.02959236639239743,
+      "score:Mobile_Banking_Activation": 0.01732503201224227,
+      "score:Personal_Loan_Offer": 0.03347061617304865,
+      "score:Savings_Account_Upsell": 0.042929692075190165
+    },
+    "2026-04": {
+      "offer_channel": 0.0045886627785076805,
+      "age_band": 0.003624183552558709,
+      "employment_type": 0.0032381219802945444,
+      "income_band": 0.009279254346002292,
+      "region": 0.015867698039162954,
+      "balance_band": 0.010119227053611308,
+      "contact_count": 1.253874307209614,
+      "tenure_months": 0.08685773503956505,
+      "products_held_count": 0.004954362152934058,
+      "has_loan": 0.0,
+      "has_card": 0.0,
+      "txn_count_30d": 0.28764809379992173,
+      "txn_value_30d": 0.1361714071746893,
+      "salary_inflow_flag": 0.0,
+      "mobile_logins_30d": 0.001256690277628486,
+      "score:Debit_Card_Activation": 0.01779149628159292,
+      "score:Fixed_Deposit_Offer": 0.03772660137497104,
+      "score:Mobile_Banking_Activation": 0.007946628249834746,
+      "score:Personal_Loan_Offer": 0.017996324610464774,
+      "score:Savings_Account_Upsell": 0.019464240103858835
+    },
+    "2026-05": {
+      "offer_channel": 0.007087432018147747,
+      "age_band": 0.008646653395970465,
+      "employment_type": 0.011610869426778084,
+      "income_band": 0.008879741897742202,
+      "region": 0.014271153284757596,
+      "balance_band": 0.005904035774570164,
+      "contact_count": 1.2912027240849009,
+      "tenure_months": 0.13101714536287856,
+      "products_held_count": 0.00852071917649981,
+      "has_loan": 0.0,
+      "has_card": 0.0,
+      "txn_count_30d": 0.4664816683005716,
+      "txn_value_30d": 0.2742103853823272,
+      "salary_inflow_flag": 0.0,
+      "mobile_logins_30d": 0.007190799372771839,
+      "score:Debit_Card_Activation": 0.005318770177556451,
+      "score:Fixed_Deposit_Offer": 0.021832123097900075,
+      "score:Mobile_Banking_Activation": 0.006175383437285619,
+      "score:Personal_Loan_Offer": 0.06437331470534839,
+      "score:Savings_Account_Upsell": 0.03749233284717078
+    },
+    "2026-06": {
+      "offer_channel": 0.007402231570557063,
+      "age_band": 0.022503500755733943,
+      "employment_type": 0.0033196050815613304,
+      "income_band": 0.007722724124194773,
+      "region": 0.011610611104577695,
+      "balance_band": 0.005054656435556633,
+      "contact_count": 1.4489813346018474,
+      "tenure_months": 0.12135050416346543,
+      "products_held_count": 0.01274410995862612,
+      "has_loan": 0.0,
+      "has_card": 0.0,
+      "txn_count_30d": 0.3603505981043532,
+      "txn_value_30d": 0.20507354088202862,
+      "salary_inflow_flag": 0.0,
+      "mobile_logins_30d": 0.0031596022967421804,
+      "score:Debit_Card_Activation": 0.021896559649810143,
+      "score:Fixed_Deposit_Offer": 0.030300561834057823,
+      "score:Mobile_Banking_Activation": 0.006194511568001796,
+      "score:Personal_Loan_Offer": 0.0475470865807513,
+      "score:Savings_Account_Upsell": 0.031011376309260263
+    }
+  },
+  "retrain_recommended": true
+}

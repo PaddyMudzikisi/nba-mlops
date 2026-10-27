@@ -1,5 +1,5 @@
 {
-  "train_run_id": "ec924b2ce1a54f05ba7e8dc6365b6271",
+  "train_run_id": "0cf9061c812544c6b8c33144c0c6a432",
   "test_period": [
     "2026-01-01",
     "2026-06-28"
@@ -8,27 +8,27 @@
   "policy_value_per_offer_usd": {
     "NBA (expected value)": {
       "IPS": {
-        "value": 14.208356624214654,
-        "ci_low": 11.766523476464997,
-        "ci_high": 16.847160185981107
+        "value": 14.9892225441732,
+        "ci_low": 12.473949319328987,
+        "ci_high": 17.67279530271073
       },
       "DM": {
-        "value": 21.23668120248995,
-        "ci_low": 20.380089899204787,
-        "ci_high": 22.117245272258714
+        "value": 27.28216332669129,
+        "ci_low": 26.30986539256531,
+        "ci_high": 28.219818566098954
       },
       "DR": {
-        "value": 23.543551701420103,
-        "ci_low": 21.17910598149154,
-        "ci_high": 25.941995142910205
+        "value": 26.215367444891797,
+        "ci_low": 23.867598980787733,
+        "ci_high": 28.690102546528028
       },
       "SNIPS": {
-        "value": 21.233996285243673,
-        "ci_low": 17.894129527954814,
-        "ci_high": 24.79708017193401
+        "value": 21.567113407378727,
+        "ci_low": 18.290468954091804,
+        "ci_high": 25.050374926449305
       },
-      "matched_offers": 772,
-      "effective_sample_size": 693.0976047956393
+      "matched_offers": 777,
+      "effective_sample_size": 694.7233895319255
     },
     "Best single offer": {
       "IPS": {
@@ -37,14 +37,14 @@
         "ci_high": 19.609086558919312
       },
       "DM": {
-        "value": 18.42200762269127,
-        "ci_low": 17.509582272495855,
-        "ci_high": 19.33730835296183
+        "value": 23.408159950399877,
+        "ci_low": 22.421012295816194,
+        "ci_high": 24.378372175067994
       },
       "DR": {
-        "value": 25.38487373529877,
-        "ci_low": 22.617514456264413,
-        "ci_high": 28.286462558294744
+        "value": 27.453396009816,
+        "ci_low": 24.692832138120366,
+        "ci_high": 30.305973676715023
       },
       "SNIPS": {
         "value": 26.76557265335434,
@@ -61,14 +61,14 @@
         "ci_high": 8.38494169440382
       },
       "DM": {
-        "value": 3.3683529684227635,
-        "ci_low": 3.262545922222907,
-        "ci_high": 3.4778088124705486
+        "value": 4.848646418576662,
+        "ci_low": 4.72635433377746,
+        "ci_high": 4.981190385809418
       },
       "DR": {
-        "value": 7.422962326058836,
-        "ci_low": 6.635931133518733,
-        "ci_high": 8.297691872930471
+        "value": 7.430302913906,
+        "ci_low": 6.651942080933664,
+        "ci_high": 8.291476348658545
       },
       "SNIPS": {
         "value": 7.383627568807084,
@@ -85,14 +85,14 @@
         "ci_high": 7.828198650712504
       },
       "DM": {
-        "value": 6.4309645413547525,
-        "ci_low": 6.213331896832755,
-        "ci_high": 6.6549407848781685
+        "value": 8.878975670407169,
+        "ci_low": 8.636439205047552,
+        "ci_high": 9.12896052211462
       },
       "DR": {
-        "value": 9.540714094344183,
-        "ci_low": 8.874163382097088,
-        "ci_high": 10.239490586425397
+        "value": 10.209604387505795,
+        "ci_low": 9.551891615170344,
+        "ci_high": 10.930872900533512
       },
       "SNIPS": {
         "value": 10.433704928757285,
@@ -110,11 +110,11 @@
   },
   "recommendation_share": {
     "NBA": {
-      "Personal_Loan_Offer": 0.4451,
-      "Fixed_Deposit_Offer": 0.234,
-      "Debit_Card_Activation": 0.1566,
-      "Savings_Account_Upsell": 0.0985,
-      "Mobile_Banking_Activation": 0.0658
+      "Personal_Loan_Offer": 0.4701,
+      "Fixed_Deposit_Offer": 0.318,
+      "Debit_Card_Activation": 0.108,
+      "Savings_Account_Upsell": 0.066,
+      "Mobile_Banking_Activation": 0.0379
     },
     "Logged": {
       "Savings_Account_Upsell": 0.3381,
@@ -127,65 +127,71 @@
   "calibration": {
     "Debit_Card_Activation": {
       "observed_rate": 0.20320855614973263,
-      "mean_raw_proba": 0.33092164993286133,
-      "mean_calibrated_proba": 0.15835928916931152
+      "mean_raw_proba": 0.21492762863636017,
+      "mean_calibrated_proba": 0.21492762863636017,
+      "brier": 0.1672726942555985
     },
     "Fixed_Deposit_Offer": {
       "observed_rate": 0.12351778656126482,
-      "mean_raw_proba": 0.2585330903530121,
-      "mean_calibrated_proba": 0.06802520155906677
+      "mean_raw_proba": 0.11571455746889114,
+      "mean_calibrated_proba": 0.11571455746889114,
+      "brier": 0.10410089897916708
     },
     "Mobile_Banking_Activation": {
       "observed_rate": 0.15594541910331383,
-      "mean_raw_proba": 0.28129491209983826,
-      "mean_calibrated_proba": 0.12122110277414322
+      "mean_raw_proba": 0.17316895723342896,
+      "mean_calibrated_proba": 0.17316895723342896,
+      "brier": 0.14166024768459692
     },
     "Personal_Loan_Offer": {
       "observed_rate": 0.18876755070202808,
-      "mean_raw_proba": 0.2406037300825119,
-      "mean_calibrated_proba": 0.11894825845956802
+      "mean_raw_proba": 0.15113039314746857,
+      "mean_calibrated_proba": 0.15113039314746857,
+      "brier": 0.1409604299482014
     },
     "Savings_Account_Upsell": {
       "observed_rate": 0.2096195262024408,
-      "mean_raw_proba": 0.3005812168121338,
-      "mean_calibrated_proba": 0.09495852142572403
+      "mean_raw_proba": 0.13651937246322632,
+      "mean_calibrated_proba": 0.13651937246322632,
+      "brier": 0.16653251318149542
     }
   },
+  "propensity_check_mean_uniform_weight": 0.6815164023958039,
   "fairness_by_gender": {
     "Female": {
       "n": 2142,
       "acceptance_rate": 0.17086834733893558,
-      "auc_logged_action": 0.6782556121695467,
+      "auc_logged_action": 0.6862000319992122,
       "recommendation_share": {
-        "Personal_Loan_Offer": 0.4421,
-        "Fixed_Deposit_Offer": 0.2428,
-        "Debit_Card_Activation": 0.1597,
-        "Savings_Account_Upsell": 0.0938,
-        "Mobile_Banking_Activation": 0.0616
+        "Personal_Loan_Offer": 0.4608,
+        "Fixed_Deposit_Offer": 0.3268,
+        "Debit_Card_Activation": 0.1064,
+        "Savings_Account_Upsell": 0.0668,
+        "Mobile_Banking_Activation": 0.0392
       }
     },
     "Male": {
       "n": 1895,
       "acceptance_rate": 0.18575197889182057,
-      "auc_logged_action": 0.6617458610734697,
+      "auc_logged_action": 0.6702059889235845,
       "recommendation_share": {
-        "Personal_Loan_Offer": 0.4459,
-        "Fixed_Deposit_Offer": 0.228,
-        "Debit_Card_Activation": 0.1557,
-        "Savings_Account_Upsell": 0.1013,
-        "Mobile_Banking_Activation": 0.0691
+        "Personal_Loan_Offer": 0.4792,
+        "Fixed_Deposit_Offer": 0.3108,
+        "Debit_Card_Activation": 0.1113,
+        "Savings_Account_Upsell": 0.0644,
+        "Mobile_Banking_Activation": 0.0343
       }
     },
     "Prefer_not_to_say": {
       "n": 83,
       "acceptance_rate": 0.1686746987951807,
-      "auc_logged_action": 0.6149068322981367,
+      "auc_logged_action": 0.5652173913043478,
       "recommendation_share": {
         "Personal_Loan_Offer": 0.506,
-        "Savings_Account_Upsell": 0.1566,
-        "Fixed_Deposit_Offer": 0.1446,
-        "Debit_Card_Activation": 0.0964,
-        "Mobile_Banking_Activation": 0.0964
+        "Fixed_Deposit_Offer": 0.253,
+        "Savings_Account_Upsell": 0.0843,
+        "Mobile_Banking_Activation": 0.0843,
+        "Debit_Card_Activation": 0.0723
       }
     }
   }

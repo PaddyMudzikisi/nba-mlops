@@ -1,0 +1,12 @@
+Scored on offers after 2026-03-31; champion trained to 2025-12-31, challenger to 2026-03-31
+action                     model          n    AUC   Brier   pred    obs    gap
+Debit_Card_Activation      champion     281  0.616  0.1884  0.223  0.224    +1%
+Debit_Card_Activation      challenger   281  0.608  0.1815  0.194  0.224   +16%
+Fixed_Deposit_Offer        champion     506  0.751  0.0959  0.112  0.121    +8%
+Fixed_Deposit_Offer        challenger   506  0.780  0.0966  0.104  0.121   +16%
+Mobile_Banking_Activation  champion     279  0.600  0.1427  0.169  0.151   -11%
+Mobile_Banking_Activation  challenger   279  0.622  0.1346  0.164  0.151    -8%
+Personal_Loan_Offer        champion     330  0.737  0.1342  0.138  0.176   +27%
+Personal_Loan_Offer        challenger   330  0.745  0.1356  0.158  0.176   +11%
+Savings_Account_Upsell     champion     661  0.630  0.1691  0.131  0.207   +59%
+Savings_Account_Upsell     challenger   661  0.646  0.1630  0.164  0.207   +26%
