@@ -48,13 +48,22 @@ def guess_schema(frame):
         return None
 
     roles = {
-        "customer_key": find(r"customer.*(id|key)", r"(user|client|cust).*(id|key)", r"^id$"),
+        "customer_key": find(r"customer.*(id|key|ref)", r"(user|client|cust|member).*(id|key|ref|no)",
+                             r"^(client|customer|member)", r"^id$"),
         "offer_date": find(r"date", r"time"),
         "action": find(r"offer.*(name|type)", r"^offer$", r"product", r"action", r"campaign"),
-        "accepted": find(r"accept", r"target", r"label", r"convert", r"response", r"outcome"),
+        "accepted": find(r"accept", r"target", r"label", r"convert", r"response", r"outcome", r"took_?up",
+                         r"uptake", r"purchas", r"bought", r"success"),
         "value": find(r"value", r"revenue", r"amount"),
         "propensity": find(r"propensity", r"prob"),
     }
+    if not roles["accepted"]:  # any yes/no column
+        from nba.features import FALSE_VALUES, TRUE_VALUES
+        for c in cols:
+            values = set(frame[c].dropna().astype(str).str.strip().str.lower())
+            if values and values <= TRUE_VALUES | FALSE_VALUES and c not in roles.values():
+                roles["accepted"] = c
+                break
     used = {v for v in roles.values() if v}
     categorical, numeric = [], []
     for c in cols:
