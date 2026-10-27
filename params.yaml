@@ -36,5 +36,10 @@ xgboost:
 reproducibility:
   tolerance: 1.0e-6
 
+# Population Stability Index thresholds for drift monitoring.
+monitoring:
+  psi_warn: 0.1
+  psi_alert: 0.25
+
 mlflow:
   experiment: nba

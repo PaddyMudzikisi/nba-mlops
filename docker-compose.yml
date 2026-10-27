@@ -2,7 +2,7 @@ name: nba-mlops
 
 services:
   mlflow:
-    image: nba-mlops:0.1.0
+    image: nba-mlops:0.2.0
     build: .
     command: >
       mlflow server
@@ -23,7 +23,7 @@ services:
 
   # One-off jobs: docker compose run --rm app <command>
   app:
-    image: nba-mlops:0.1.0
+    image: nba-mlops:0.2.0
     profiles: ["job"]
     working_dir: /app
     volumes:
@@ -32,6 +32,25 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       IMAGE_ID: ${IMAGE_ID:-unknown}
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+  # Scoring API: make serve RUN_ID=<parent run id>
+  api:
+    image: nba-mlops:0.2.0
+    profiles: ["serve"]
+    working_dir: /app
+    command: uvicorn --factory nba.serve:from_env --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:8000:8000"   # localhost only
+    volumes:
+      - .:/app
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      SERVE_RUN_ID: ${SERVE_RUN_ID:-}
+      DECISION_LOG: /app/logs/decisions.jsonl
+    restart: unless-stopped
     depends_on:
       mlflow:
         condition: service_healthy

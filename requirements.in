@@ -12,3 +12,8 @@ dvc==3.59.1
 sqlalchemy==2.0.40
 # dvc 3.59 breaks on pathspec 1.x
 pathspec==0.12.1
+# Scoring service and tests
+fastapi==0.162.0
+uvicorn==0.54.0
+pytest==9.1.1
+httpx==0.28.1

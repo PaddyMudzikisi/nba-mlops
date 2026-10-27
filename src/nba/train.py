@@ -76,8 +76,14 @@ def main():
         if prov["git_dirty"] == "True":
             print("WARNING: uncommitted changes; this run cannot be tied to an exact commit.")
 
+        policy = {
+            "train_run_id": parent.info.run_id,
+            "features": features(params),
+            "categories": {col: data[col].cat.categories.tolist() for col in params["dataset"]["categorical"]},
+            "actions": {},
+        }
         for action in sorted(data.action.unique()):
-            with mlflow.start_run(run_name=action, nested=True):
+            with mlflow.start_run(run_name=action, nested=True) as child:
                 model, train, test, proba = fit_action(data, action, params)
                 y_test = test.accepted
                 metrics = {
@@ -96,11 +102,19 @@ def main():
                     pd.DataFrame({"offer_id": test.offer_id, "proba": proba}).to_csv(
                         path, index=False, float_format="%.17g")
                     mlflow.log_artifact(str(path))
-                mlflow.xgboost.log_model(model, artifact_path="model",
-                                         registered_model_name=f"nba_{action}")
+                info = mlflow.xgboost.log_model(model, artifact_path="model",
+                                                registered_model_name=f"nba_{action}")
+                policy["actions"][action] = {
+                    "value": float(train.value.median()),
+                    "scale_pos_weight": model.get_params()["scale_pos_weight"],
+                    "model_uri": f"runs:/{child.info.run_id}/model",
+                    "model_version": str(info.registered_model_version),
+                }
                 print(f"{action:26s} ROC-AUC {metrics['roc_auc']:.3f}  PR-AUC {metrics['pr_auc']:.3f}  "
                       f"test n={metrics['n_test']:,}")
 
+        # Everything the scoring step needs to turn these models into a policy.
+        mlflow.log_dict(policy, "policy.json")
         print(f"\nParent run id: {parent.info.run_id}")
 
 
