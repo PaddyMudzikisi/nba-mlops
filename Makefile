@@ -1,8 +1,8 @@
-IMAGE    := nba-mlops:0.2.0
+IMAGE    := nba-mlops:0.3.0
 IMAGE_ID  = $(shell docker image inspect -f '{{.Id}}' $(IMAGE) 2>/dev/null)
 JOB       = IMAGE_ID=$(IMAGE_ID) docker compose run --rm app
 
-.PHONY: build up down data eda train reproduce evaluate monitor report serve test
+.PHONY: build up down data eda explore train reproduce evaluate monitor report serve test
 
 build:      ## build the pinned environment image
 	docker compose build
@@ -19,6 +19,9 @@ data:       ## version data/raw with DVC (after adding or changing the dataset)
 
 eda:        ## Chapter 3 data understanding: figures and tests -> reports/eda/
 	$(JOB) python -m nba.eda
+
+explore:    ## interactive EDA explorer on http://localhost:8501
+	docker compose --profile explore up -d explore
 
 train:      ## train all action models (commit first so the run is tied to a commit)
 	$(JOB) python -m nba.train

@@ -43,6 +43,7 @@ All services run in Docker on one machine, from a single pinned image
 | MLflow server, http://localhost:5001 | experiments, artefacts, model registry (`nba_<offer>`) |
 | Job container (`make train` etc.) | training, reproduction, evaluation, monitoring, reports |
 | Scoring API, http://localhost:8000 | `POST /recommend`, decision log with run and model versions |
+| EDA explorer, http://localhost:8501 | interactive charts, cross-tabs, correlations and tests on the filtered data |
 
 MLflow is on port 5001 because macOS AirPlay Receiver occupies 5000.
 
@@ -55,6 +56,7 @@ make build                 # build the pinned image
 make up                    # start MLflow on http://localhost:5001
 make data                  # after adding/changing data/raw: dvc add + dvc push
 make eda                   # Chapter 3 data understanding -> reports/eda/eda.md and figures
+make explore               # interactive EDA explorer on http://localhost:8501
 git commit ...             # commit first, so the run is tied to an exact commit
 make train                 # trains all offer models; prints the parent run id
 make reproduce RUN_ID=...  # retrain from the recorded params and compare predictions

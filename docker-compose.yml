@@ -2,7 +2,7 @@ name: nba-mlops
 
 services:
   mlflow:
-    image: nba-mlops:0.2.0
+    image: nba-mlops:0.3.0
     build: .
     command: >
       mlflow server
@@ -23,7 +23,7 @@ services:
 
   # One-off jobs: docker compose run --rm app <command>
   app:
-    image: nba-mlops:0.2.0
+    image: nba-mlops:0.3.0
     profiles: ["job"]
     working_dir: /app
     volumes:
@@ -38,7 +38,7 @@ services:
 
   # Scoring API: make serve RUN_ID=<parent run id>
   api:
-    image: nba-mlops:0.2.0
+    image: nba-mlops:0.3.0
     profiles: ["serve"]
     working_dir: /app
     command: uvicorn --factory nba.serve:from_env --host 0.0.0.0 --port 8000
@@ -54,6 +54,20 @@ services:
     depends_on:
       mlflow:
         condition: service_healthy
+
+  # Interactive EDA explorer: make explore
+  explore:
+    image: nba-mlops:0.3.0
+    profiles: ["explore"]
+    working_dir: /app
+    command: streamlit run src/nba/explore.py --server.address 0.0.0.0 --server.port 8501 --server.headless true --browser.gatherUsageStats false
+    ports:
+      - "127.0.0.1:8501:8501"   # localhost only
+    volumes:
+      - .:/app
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    restart: unless-stopped
 
 volumes:
   mlflow-data:
