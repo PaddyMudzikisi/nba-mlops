@@ -7,7 +7,7 @@ JOB       = IMAGE_ID=$(IMAGE_ID) docker compose run --rm app
 build:      ## build the pinned environment image
 	docker compose build
 
-up:         ## start the MLflow server on http://localhost:5000
+up:         ## start the MLflow server on http://localhost:5001
 	docker compose up -d mlflow
 
 down:
