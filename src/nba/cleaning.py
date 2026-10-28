@@ -5,7 +5,9 @@ import pandas as pd
 
 from nba.features import FALSE_VALUES, TRUE_VALUES
 
+REQUIRED = ["customer_key", "offer_date", "action", "accepted"]
 DEFAULT = {
+    "drop_columns": [],          # columns removed from the data and every role
     "trim_text": True,           # strip spaces, blanks -> missing, one spelling per case variant
     "drop_incomplete": True,     # rows without a readable key, date, offer or outcome
     "date_from": None,           # keep offers on or after this date (YYYY-MM-DD)
@@ -56,6 +58,11 @@ def role_of(column, schema):
     return "not used"
 
 
+def droppable_never(schema):
+    """The columns the pipeline cannot run without."""
+    return [schema["columns"][r] for r in REQUIRED if schema["columns"].get(r)]
+
+
 def _outcome_readable(s):
     if pd.api.types.is_numeric_dtype(s):
         return s.isin([0, 1])
@@ -73,6 +80,17 @@ def clean(frame, schema, recipe):
 
     def step(name, before, detail=""):
         log.append({"step": name, "rows_before": before, "rows_after": len(frame), "detail": detail})
+
+    drop = [c for c in recipe["drop_columns"] if c in frame and c not in droppable_never(schema)]
+    if drop:
+        frame = frame.drop(columns=drop)
+        roles = schema["columns"] = {r: (None if c in drop else c) for r, c in roles.items()}
+        schema["categorical"] = [c for c in schema["categorical"] if c not in drop]
+        schema["numeric"] = [c for c in schema["numeric"] if c not in drop]
+        schema["protected"] = [c for c in schema.get("protected", []) if c not in drop]
+        if schema.get("eligibility_column") in drop:
+            schema["eligibility_column"] = None
+        step("drop columns", len(frame), ", ".join(drop))
 
     if recipe["trim_text"]:
         changed = 0

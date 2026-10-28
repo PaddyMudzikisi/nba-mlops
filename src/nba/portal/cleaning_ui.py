@@ -21,6 +21,13 @@ def controls(frame, schema, key):
 
     d = cleaning.DEFAULT
     recipe = {}
+    options = [c for c in frame.columns if c not in cleaning.droppable_never(schema)]
+    unused = [c for c in options if cleaning.role_of(c, schema) == "not used"]
+    recipe["drop_columns"] = st.multiselect(
+        "Drop columns you don't want (removed from the saved data and from the features)", options, unused,
+        key=f"{key}-dropcols",
+        help="Columns not used by the pipeline are selected by default, so the saved data holds only what it "
+             "needs. The customer key, offer date, offer and outcome cannot be dropped.")
     c1, c2, c3 = st.columns(3)
     recipe["trim_text"] = c1.checkbox("Trim and standardise text", d["trim_text"], key=f"{key}-trim")
     recipe["drop_incomplete"] = c1.checkbox("Drop rows without a key, date, offer or outcome",

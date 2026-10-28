@@ -67,3 +67,12 @@ def test_offer_name_is_not_personal_data_and_offers_are_never_counts():
     assert scan(f)["sensitive_columns"] == ["customer_name"]
     assert guess_schema(f.drop(columns="offer_name"))["columns"]["action"] is None
     assert guess_schema(f)["columns"]["action"] == "offer_name"
+
+
+def test_drop_columns_removes_them_from_data_and_roles_but_keeps_required_ones():
+    s = {**SCHEMA, "columns": {**SCHEMA["columns"], "value": "balance"}, "protected": ["channel"],
+         "categorical": []}
+    out, schema, log = clean(frame(), s, {"drop_columns": ["balance", "channel", "offer_name"]})
+    assert "balance" not in out and "channel" not in out and "offer_name" in out
+    assert schema["columns"]["value"] is None and schema["numeric"] == ["sparse"] and schema["protected"] == []
+    assert log[0] == {"step": "drop columns", "rows_before": 100, "rows_after": 100, "detail": "balance, channel"}
