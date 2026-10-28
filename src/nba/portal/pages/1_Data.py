@@ -28,6 +28,26 @@ with registered:
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
     st.caption("Choose the dataset to work with in the sidebar; every page uses it.")
 
+    with st.expander("Delete a dataset"):
+        names = [d["name"] for d in datasets.list_datasets()]
+        target = st.selectbox("Dataset to delete", names, index=None, placeholder="choose", key="delete-name")
+        if target:
+            reason = datasets.protected_reason(target)
+            n_runs = len(common.train_runs(target))
+            if reason:
+                st.info(f"{target!r} cannot be deleted: {reason}.")
+            else:
+                st.warning(f"This removes {target!r} (its CSV, schema and DVC file) from the registry. Its "
+                           f"{n_runs} training run(s) stay in MLflow for the audit trail but can no longer be "
+                           "reproduced or retrained from the portal.")
+                typed = st.text_input("Type the dataset name to confirm", key="delete-confirm")
+                if st.button("Delete dataset", type="primary", disabled=typed != target, key="delete-go"):
+                    datasets.delete(target)
+                    if st.session_state.get("active_dataset") == target:
+                        del st.session_state["active_dataset"]
+                    st.toast(f"Deleted {target}")
+                    st.rerun()
+
 with reclean:
     names = [d["name"] for d in datasets.list_datasets()]
     source = st.selectbox("Dataset to clean", names, index=names.index(st.session_state["active_dataset"])

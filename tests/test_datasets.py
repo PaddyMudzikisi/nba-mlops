@@ -39,3 +39,21 @@ def test_privacy_scan_blocks_personal_data_and_flags_column_names():
     result = scan(f)
     assert not result["clean"] and result["pattern_matches"]["contact"] == {"email": 1}
     assert result["sensitive_columns"] == ["full_name"]
+
+
+def test_delete_removes_the_folder_and_protects_the_reference_dataset(tmp_path, monkeypatch):
+    import pytest
+    import yaml
+
+    from nba import datasets, deploy
+    monkeypatch.setattr(datasets, "DATASETS", tmp_path)
+    monkeypatch.setattr(deploy, "current", lambda: None)
+    for name, path in [("extra", "data/datasets/extra/data.csv"), ("reference", "data/raw/mydata.csv")]:
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "schema.yaml").write_text(yaml.safe_dump({"name": name, "path": path}))
+    datasets.delete("extra")
+    assert not (tmp_path / "extra").exists()
+    with pytest.raises(ValueError, match="reference"):
+        datasets.delete("reference")
+    with pytest.raises(ValueError, match="no dataset"):
+        datasets.delete("missing")

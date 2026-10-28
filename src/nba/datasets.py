@@ -146,3 +146,36 @@ def save(name, csv_bytes, schema, description=""):
         r = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
         log.append(f"$ {' '.join(cmd)}\n{r.stdout}{r.stderr}")
     return schema, "\n".join(log)
+
+
+def protected_reason(name):
+    """Why a dataset cannot be deleted, or None."""
+    from nba import deploy
+    schema = load_schema(name)
+    if not schema["path"].startswith(f"data/datasets/{name}/"):
+        return f"its data lives at {schema['path']} (the reference dataset), outside the registry folder"
+    current = deploy.current()
+    if current:
+        from mlflow.tracking import MlflowClient
+
+        from nba.features import dataset_sha256
+        tags = MlflowClient().get_run(current["run_id"]).data.tags
+        path = REPO / schema["path"]
+        if tags.get("dataset") == name or (path.exists() and tags.get("data_sha256") == dataset_sha256(path)):
+            return f"the deployed run {current['run_id'][:8]} was trained on it"
+    return None
+
+
+def delete(name):
+    """Remove the dataset's folder (CSV, schema, DVC file) and unstage it in git.
+    Its content stays in the DVC store and its MLflow runs are kept."""
+    if not NAME.match(name) or not (DATASETS / name / "schema.yaml").exists():
+        raise ValueError(f"no dataset called {name!r}")
+    reason = protected_reason(name)
+    if reason:
+        raise ValueError(f"{name!r} cannot be deleted: {reason}")
+    import shutil
+    shutil.rmtree(DATASETS / name)
+    r = subprocess.run(["git", "rm", "-r", "-q", "--cached", "--ignore-unmatch", f"data/datasets/{name}"],
+                       cwd=REPO, capture_output=True, text=True)
+    return r.stdout + r.stderr
