@@ -1,5 +1,6 @@
 """Upload a CSV, check it for personal data, map its columns to the pipeline's
-roles and register it as a DVC-versioned dataset."""
+roles, clean it and register it as a DVC-versioned dataset; or clean a
+registered dataset into a new one."""
 import io
 import re
 from pathlib import Path
@@ -9,12 +10,12 @@ import streamlit as st
 
 from nba import datasets
 from nba.config import REPO
-from nba.portal import common
+from nba.portal import cleaning_ui, common
 from nba.privacy import scan
 
 common.page("1 · Data")
 common.active_dataset("data")
-registered, upload = st.tabs(["Registered datasets", "Upload a new dataset"])
+registered, upload, reclean = st.tabs(["Registered datasets", "Upload a new dataset", "Clean a registered dataset"])
 
 with registered:
     rows = []
@@ -23,9 +24,44 @@ with registered:
         n = sum(1 for _ in open(path)) - 1 if path.exists() else None
         rows.append({"name": d["name"], "description": d.get("description", ""), "offers (rows)": n,
                      "features": len(d["categorical"]) + len(d["numeric"]), "path": d["path"],
-                     "created": d.get("created", "")})
+                     "cleaned": "yes" if d.get("cleaning") else "", "created": d.get("created", "")})
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
     st.caption("Choose the dataset to work with in the sidebar; every page uses it.")
+
+with reclean:
+    names = [d["name"] for d in datasets.list_datasets()]
+    source = st.selectbox("Dataset to clean", names, index=names.index(st.session_state["active_dataset"])
+                          if st.session_state.get("active_dataset") in names else 0)
+    schema = datasets.load_schema(source)
+    path = REPO / schema["path"]
+    original = pd.read_csv(path) if path.exists() else None
+    if original is None:
+        st.error(f"{schema['path']} is not on this machine; run `dvc pull` first.")
+    else:
+        st.caption(f"The cleaned data is saved as a new dataset, so {source!r} and the runs trained on it are unchanged.")
+        base = {k: schema.get(k) for k in ["columns", "categorical", "numeric", "protected", "eligibility_column",
+                                           "date_format"]}
+        cleaned, new_schema, recipe, log = cleaning_ui.controls(original, base, "reclean")
+        new_schema["cleaning"] = {"source": source, "rows_in": len(original), "rows_out": len(cleaned),
+                                  "recipe": recipe, "log": log}
+        problems = datasets.validate(cleaned, new_schema)
+        for p in problems:
+            st.error(p)
+        c1, c2 = st.columns(2)
+        new_name = c1.text_input("New dataset name", f"{source}_clean"[:40])
+        description = c2.text_input("Description", f"{source} cleaned", key="reclean-desc")
+        exists = new_name in names
+        if exists:
+            st.error(f"A dataset called {new_name!r} already exists.")
+        if st.button("Save the cleaned dataset", type="primary", key="reclean-save",
+                     disabled=bool(problems) or exists or not datasets.NAME.match(new_name)):
+            with st.spinner("Saving and versioning with DVC..."):
+                saved, out = datasets.save(new_name, cleaned.to_csv(index=False).encode(), new_schema, description)
+            st.session_state["active_dataset"] = new_name
+            st.success(f"Saved {saved['path']} and versioned it with DVC. It is now the active dataset.")
+            with st.expander("DVC output"):
+                st.code(out, language=None)
+            st.page_link("pages/2_Explore.py", label="Next: explore it")
 
 with upload:
     st.markdown("One row per offer made to a customer. Required: a pseudonymous customer key, the offer "
@@ -90,6 +126,13 @@ with upload:
     schema = {"columns": roles, "categorical": categorical, "numeric": numeric, "protected": protected,
               "eligibility_column": None if eligibility == none else eligibility,
               "date_format": date_format or None}
+
+    st.subheader("Clean")
+    rows_in = len(frame)
+    frame, schema, recipe, log = cleaning_ui.controls(frame, schema, "upload")
+    schema["cleaning"] = {"rows_in": rows_in, "rows_out": len(frame), "recipe": recipe, "log": log}
+
+    st.subheader("Check")
     problems = datasets.validate(frame, schema)
     if problems:
         for p in problems:

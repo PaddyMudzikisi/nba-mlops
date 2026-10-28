@@ -13,6 +13,8 @@ SENSITIVE_NAME = re.compile(
     r"(^|_)(name|surname|firstname|first_name|lastname|last_name|fullname|full_name|email|e_mail|phone|"
     r"phone_number|mobile_number|msisdn|cell|national_id|id_number|idnumber|passport|account|account_number|"
     r"account_no|acc_no|iban|address|dob|date_of_birth)($|_)", re.IGNORECASE)
+# Names of offers, products and the like are not about a person.
+BUSINESS_NAME = re.compile(r"(offer|product|campaign|channel|segment|plan|package|action)_?name", re.IGNORECASE)
 
 
 def scan(frame):
@@ -24,7 +26,7 @@ def scan(frame):
         hits = {k: v for k, v in hits.items() if v}
         if hits:
             matches[col] = hits
-    sensitive = [c for c in frame.columns if SENSITIVE_NAME.search(str(c))]
+    sensitive = [c for c in frame.columns if SENSITIVE_NAME.search(str(c)) and not BUSINESS_NAME.search(str(c))]
     return {"pattern_matches": matches, "sensitive_columns": sensitive, "clean": not matches}
 
 

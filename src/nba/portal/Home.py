@@ -28,7 +28,7 @@ c4.metric("Retrain recommended", "-" if drift is None else drift.get("tags.retra
 
 st.subheader("Pipeline")
 steps = [
-    ("pages/1_Data.py", "1 · Data", "upload a CSV, privacy check, map columns, version with DVC"),
+    ("pages/1_Data.py", "1 · Data", "upload a CSV, privacy check, map columns, clean, version with DVC"),
     ("pages/2_Explore.py", "2 · Explore", "interactive EDA and the standard EDA report"),
     ("pages/3_Train.py", "3 · Train", "choose split, features, model, tuning; train in the background"),
     ("pages/4_Results.py", "4 · Results", "train vs test metrics, overfitting, feature importance, compare runs"),

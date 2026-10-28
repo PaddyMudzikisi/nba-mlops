@@ -40,9 +40,11 @@ def guess_schema(frame):
     """Suggested role and feature type for each column, by name and content."""
     cols = list(frame.columns)
 
-    def find(*patterns):
+    text_cols = [c for c in cols if not pd.api.types.is_numeric_dtype(frame[c])]
+
+    def find(*patterns, among=None):
         for p in patterns:
-            for c in cols:
+            for c in cols if among is None else among:
                 if re.search(p, c, re.IGNORECASE):
                     return c
         return None
@@ -51,7 +53,8 @@ def guess_schema(frame):
         "customer_key": find(r"customer.*(id|key|ref)", r"(user|client|cust|member).*(id|key|ref|no)",
                              r"^(client|customer|member)", r"^id$"),
         "offer_date": find(r"date", r"time"),
-        "action": find(r"offer.*(name|type)", r"^offer$", r"product", r"action", r"campaign"),
+        "action": find(r"offer.*(name|type)", r"^offer$", r"product", r"action", r"campaign",
+                       among=text_cols),  # an offer is a label, never a count
         "accepted": find(r"accept", r"target", r"label", r"convert", r"response", r"outcome", r"took_?up",
                          r"uptake", r"purchas", r"bought", r"success"),
         "value": find(r"value", r"revenue", r"amount"),
