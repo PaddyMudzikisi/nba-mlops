@@ -28,10 +28,22 @@ def git(*args):
     return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True).stdout.strip()
 
 
+# What a model depends on besides its data and parameters, which are pinned
+# separately (data_sha256, the logged params.yaml). Datasets added and reports
+# written from the portal therefore do not make a run "dirty".
+CODE_PATHS = ["src", "requirements.lock", "Dockerfile"]
+
+
+def code_changes():
+    return [line[2:].strip() for line in git("status", "--porcelain", "--", *CODE_PATHS).splitlines()]
+
+
 def provenance(params):
+    changes = code_changes()
     return {
         "git_commit": git("rev-parse", "HEAD") or "none",
-        "git_dirty": str(bool(git("status", "--porcelain", "--untracked-files=no"))),
+        "git_dirty": str(bool(changes)),
+        "git_changes": ", ".join(changes)[:500] or "none",
         "data_sha256": dataset_sha256(REPO / params["dataset"]["path"]),
         "image_id": os.environ.get("IMAGE_ID", "unknown"),
         "platform": platform.machine(),
