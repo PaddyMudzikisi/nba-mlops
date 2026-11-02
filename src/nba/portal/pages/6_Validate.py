@@ -8,7 +8,7 @@ from nba import jobs
 from nba.portal import common
 from nba.report import label
 
-common.page("5 · Validate")
+common.page("6 · Validate")
 name = common.active_dataset("validate")
 runs = common.train_runs(name)
 run_id = common.pick_run(runs, "validate-run")

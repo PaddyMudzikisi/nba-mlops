@@ -101,6 +101,16 @@ def load_artifact_json(run_id, path):
         return None
 
 
+@st.cache_data(ttl=60)
+def load_artifact_csv(run_id, path):
+    import tempfile
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            return pd.read_csv(mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=path, dst_path=tmp))
+    except Exception:  # noqa: BLE001  (missing artifact)
+        return None
+
+
 def load_artifact_yaml(run_id, path):
     import tempfile
 

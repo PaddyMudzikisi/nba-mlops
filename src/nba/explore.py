@@ -80,6 +80,8 @@ def heatmap(ax, table, fmt, cmap=SEQ, vmin=None, vmax=None, counts=None):
 
 def outputs(fig, table, slug):
     """Show the figure and table, with download and save buttons."""
+    if len(table.index) and isinstance(table.index[0], pd.Interval):  # quintile bands: show as text
+        table = table.set_axis([str(i) for i in table.index])
     st.pyplot(fig)
     png = io.BytesIO()
     fig.savefig(png, format="png")
@@ -100,12 +102,36 @@ def slugify(*parts):
     return re.sub(r"[^a-z0-9]+", "_", "_".join(str(p) for p in parts).lower()).strip("_")[:80]
 
 
+def summary(s):
+    """Summary statistics of a numeric variable: centre, spread and shape."""
+    s = s.dropna()
+    return pd.Series({"offers": len(s), "mean": s.mean(), "median": s.median(), "mode": s.mode().iloc[0] if len(s) else np.nan,
+                      "standard deviation": s.std(), "min": s.min(), "max": s.max(), "range": s.max() - s.min(),
+                      "25%": s.quantile(0.25), "75%": s.quantile(0.75), "skewness": s.skew()})
+
+
 def view_distribution(df, cats, nums):
     col = st.selectbox("Variable", cats + nums, format_func=name)
-    split = st.checkbox("Split by accepted / not accepted")
+    c1, c2 = st.columns(2)
+    if col in cats:
+        chart = c1.radio("Chart", ["Bar chart", "Pie chart"], horizontal=True)
+    else:
+        chart = c1.radio("Chart", ["Histogram", "Box plot"], horizontal=True)
+    split = c2.checkbox("Split by accepted / not accepted", disabled=chart == "Pie chart")
     fig, ax = plt.subplots(figsize=(8, 4))
     if col in cats:
-        if split:
+        if chart == "Pie chart":
+            table = sort_index(col, df[col].value_counts(normalize=True), nums).to_frame("share")
+            if len(table) > 8:
+                st.caption("More than 8 categories: the smallest are grouped as 'other' in the pie.")
+            shown = table.share.head(7) if len(table) > 8 else table.share
+            if len(table) > 8:
+                shown = pd.concat([shown, pd.Series({"other": table.share.iloc[7:].sum()})])
+            ax.pie(shown, labels=[value_name(col, v) for v in shown.index], autopct="%1.1f%%",
+                   colors=PALETTE[:len(shown)], startangle=90, counterclock=False,
+                   wedgeprops={"edgecolor": SURFACE, "linewidth": 2}, textprops={"fontsize": 8.5})
+            ax.axis("equal")
+        elif split:
             table = pd.crosstab(df[col], df.accepted, normalize="columns").rename(
                 columns={0: "not accepted", 1: "accepted"})
             table = table.loc[sort_index(col, table["accepted"], nums).index]
@@ -120,24 +146,51 @@ def view_distribution(df, cats, nums):
             for y, v in enumerate(table.share):
                 ax.annotate(f"{v:.1%}", (v, y), xytext=(4, 0), textcoords="offset points", va="center",
                             fontsize=8, color=INK2)
-        ax.xaxis.set_major_formatter(PercentFormatter(1.0, decimals=0))
-        ax.grid(axis="y", visible=False)
+        if chart == "Bar chart":
+            ax.xaxis.set_major_formatter(PercentFormatter(1.0, decimals=0))
+            ax.grid(axis="y", visible=False)
     else:
-        bins = np.arange(df[col].min(), df[col].max() + 2) - 0.5 if df[col].nunique() <= 25 else 30
-        if split:
-            for i, (v, c) in enumerate([(0, "not accepted"), (1, "accepted")]):
-                ax.hist(df.loc[df.accepted == v, col], bins=bins, density=True, histtype="step", lw=2,
-                        color=PALETTE[i], label=c)
-            ax.legend(fontsize=8.5)
-            ax.set_ylabel("density")
+        values = df[col].dropna()
+        groups_ = [(0, "not accepted"), (1, "accepted")] if split else [(None, "all offers")]
+        if chart == "Box plot":
+            data = [values[df.accepted[values.index] == v] if v is not None else values for v, _ in groups_]
+            parts = ax.boxplot(data, orientation="horizontal", tick_labels=[c for _, c in groups_], patch_artist=True, widths=0.5,
+                               medianprops={"color": INK, "lw": 2}, flierprops={"markersize": 3, "alpha": 0.4})
+            for i, box in enumerate(parts["boxes"]):
+                box.set(facecolor=PALETTE[i], alpha=0.35, edgecolor=PALETTE[i])
+            ax.grid(axis="y", visible=False)
+            st.caption("The box spans the middle half of the values (25% to 75%), the line is the median, and the "
+                       "points beyond the whiskers (1.5 × the box width) are potential outliers.")
         else:
-            ax.hist(df[col], bins=bins, color=PALETTE[0], edgecolor=SURFACE, linewidth=0.8)
-            ax.set_ylabel("offers")
-        ax.grid(axis="x", visible=False)
-        table = df.groupby("accepted")[col].describe().rename(index={0: "not accepted", 1: "accepted"}) \
-            if split else df[col].describe().to_frame(col)
+            normal = st.checkbox("Overlay a normal curve (same mean and standard deviation)", disabled=split)
+            bins = np.arange(values.min(), values.max() + 2) - 0.5 if values.nunique() <= 25 else 30
+            if split:
+                for i, (v, c) in enumerate(groups_):
+                    ax.hist(values[df.accepted[values.index] == v], bins=bins, density=True, histtype="step",
+                            lw=2, color=PALETTE[i], label=c)
+                ax.legend(fontsize=8.5)
+                ax.set_ylabel("density")
+            else:
+                ax.hist(values, bins=bins, density=normal, color=PALETTE[0], edgecolor=SURFACE, linewidth=0.8)
+                ax.set_ylabel("density" if normal else "offers")
+                if normal and values.std() > 0:
+                    x = np.linspace(values.min(), values.max(), 200)
+                    ax.plot(x, stats.norm.pdf(x, values.mean(), values.std()), color=PALETTE[1], lw=2,
+                            label="normal curve")
+                    ax.legend(fontsize=8.5)
+                    st.caption(f"Skewness {values.skew():.2f}: near 0 the normal curve fits; a large positive value "
+                               "means a long right tail, where a log transform (Features page) often helps.")
+            ax.grid(axis="x", visible=False)
+        table = (pd.DataFrame({c: summary(values[df.accepted[values.index] == v]) for v, c in groups_}) if split
+                 else summary(values).to_frame(name(col)))
     ax.set_title(f"Distribution of {name(col)}" + (" by outcome" if split else ""))
-    outputs(fig, table, slugify("distribution", col, "split" if split else ""))
+    outputs(fig, table, slugify("distribution", col, chart, "split" if split else ""))
+
+
+def wilson(p, n, z=1.96):
+    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return centre - half, centre + half
 
 
 def view_acceptance(df, cats, nums):
@@ -148,16 +201,21 @@ def view_acceptance(df, cats, nums):
     if split == "(none)":
         g = df.groupby(key, observed=True).accepted.agg(["mean", "size"])
         g = g.loc[sort_index(col, g["mean"], nums).index]
+        # Each offer is a yes/no trial, so the rate is binomial: 95% Wilson interval.
+        lo, hi = wilson(g["mean"], g["size"])
         fig, ax = plt.subplots(figsize=(8, max(3, 0.4 * len(g) + 1)))
-        ax.barh([value_name(col, v) for v in g.index], g["mean"], color=PALETTE[0], height=0.7)
-        for y, (r, n) in enumerate(zip(g["mean"], g["size"])):
-            ax.annotate(f"{r:.1%}  (n={n:,})", (r, y), xytext=(4, 0), textcoords="offset points",
+        ax.barh([value_name(col, v) for v in g.index], g["mean"], color=PALETTE[0], height=0.7,
+                xerr=[g["mean"] - lo, hi - g["mean"]], error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 3})
+        for y, (r, n, h) in enumerate(zip(g["mean"], g["size"], hi)):
+            ax.annotate(f"{r:.1%}  (n={n:,})", (h, y), xytext=(4, 0), textcoords="offset points",
                         va="center", fontsize=8, color=INK2)
         ax.axvline(overall, color=INK2, lw=1, ls="--")
-        ax.set_xlim(0, g["mean"].max() * 1.35)
+        ax.set_xlim(0, hi.max() * 1.3)
         ax.xaxis.set_major_formatter(PercentFormatter(1.0, decimals=0))
         ax.grid(axis="y", visible=False)
-        table = g.rename(columns={"mean": "acceptance_rate", "size": "offers"})
+        table = g.rename(columns={"mean": "acceptance_rate", "size": "offers"}).assign(ci_95_low=lo, ci_95_high=hi)
+        st.caption("Bars show 95% binomial (Wilson) intervals: where two intervals do not overlap, the difference "
+                   "in acceptance is unlikely to be chance.")
     else:
         rate = df.pivot_table(index=key, columns=split, values="accepted", aggfunc="mean", observed=True)
         count = df.pivot_table(index=key, columns=split, values="accepted", aggfunc="size", observed=True)

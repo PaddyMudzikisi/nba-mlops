@@ -27,19 +27,31 @@ drift = common.latest_related("monitors", current["run_id"]) if current else Non
 c4.metric("Retrain recommended", "-" if drift is None else drift.get("tags.retrain_recommended", "-"))
 
 st.subheader("Pipeline")
+st.caption("The steps follow the machine learning life cycle: data collection, pre-processing (cleaning and "
+           "feature engineering), training and validation, testing, deployment, and maintenance.")
 steps = [
-    ("pages/1_Data.py", "1 · Data", "upload a CSV, privacy check, map columns, clean, version with DVC"),
-    ("pages/2_Explore.py", "2 · Explore", "interactive EDA and the standard EDA report"),
-    ("pages/3_Train.py", "3 · Train", "choose split, features, model, tuning; train in the background"),
-    ("pages/4_Results.py", "4 · Results", "train vs test metrics, overfitting, feature importance, compare runs"),
-    ("pages/5_Validate.py", "5 · Validate", "reproducibility test, policy evaluation and fairness, drift monitoring"),
-    ("pages/6_Deploy.py", "6 · Deploy", "deployment gate, serve a run through the API, try a recommendation"),
+    ("pages/1_Data.py", "1 · Data", "Data collection and cleaning",
+     "upload a CSV, privacy check, map columns, clean (missing values, outliers, duplicates), version with DVC"),
+    ("pages/2_Explore.py", "2 · Explore", "Exploratory data analysis",
+     "bar and pie charts, histograms, box plots, time plots, summary statistics, contingency tables, "
+     "binomial and normal models, statistical tests"),
+    ("pages/3_Features.py", "3 · Features", "Feature engineering",
+     "feature creation, log transform, binning, binarisation, date split; feature selection by relevance"),
+    ("pages/4_Train.py", "4 · Train", "Model building and training",
+     "split, imputation, scaling, one-hot encoding, PCA, model family, hyperparameter tuning, model selection"),
+    ("pages/5_Results.py", "5 · Results", "Model testing",
+     "accuracy, confusion matrix, precision, recall, F1, ROC-AUC; overfitting and underfitting; importance"),
+    ("pages/6_Validate.py", "6 · Validate", "Model validation and maintenance",
+     "reproducibility test, policy evaluation and fairness, drift monitoring and retraining"),
+    ("pages/7_Deploy.py", "7 · Deploy", "Deployment and prediction",
+     "deployment gate, scoring API, single recommendation, batch scoring of a customer file"),
 ]
-for path, title, text in steps:
-    c1, c2 = st.columns([1, 4])
+for path, title, stage, text in steps:
+    c1, c2, c3 = st.columns([1, 1.4, 4])
     with c1:
         st.page_link(path, label=title)
-    c2.write(text)
+    c2.write(f"**{stage}**")
+    c3.write(text)
 
 if current:
     st.subheader("Currently deployed")

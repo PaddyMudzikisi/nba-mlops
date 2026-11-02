@@ -4,6 +4,7 @@ import mlflow
 import numpy as np
 import pandas as pd
 
+from nba import engineer
 from nba.models import load_model
 
 
@@ -27,6 +28,11 @@ class Policy:
         return cls(meta, models)
 
     def encode(self, frame):
+        recipe = self.meta.get("engineered")
+        if recipe:
+            if "offer_date" not in frame:  # scoring now: date parts of today
+                frame = frame.assign(offer_date=pd.Timestamp.now().normalize())
+            frame = engineer.apply(frame, recipe)
         X = frame[self.meta["features"]].copy()
         for col, categories in self.meta["categories"].items():
             X[col] = pd.Categorical(X[col].astype("string").fillna("missing"), categories=categories)

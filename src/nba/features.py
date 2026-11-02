@@ -3,6 +3,7 @@ import hashlib
 import numpy as np
 import pandas as pd
 
+from nba import engineer
 from nba.config import REPO
 
 TRUE_VALUES = {"1", "true", "yes", "y", "accepted", "t"}
@@ -46,6 +47,7 @@ def load_data(params):
     # file order, which the dataset hash pins down.
     repeat = key.groupby(key).cumcount()
     frame["offer_id"] = key.where(repeat == 0, key + "|" + repeat.astype(str))
+    frame = engineer.apply(frame, ds.get("engineered"))
     for col in ds["categorical"]:
         # Categories come from the full data, not an action subset, so every
         # model sees the same encoding.

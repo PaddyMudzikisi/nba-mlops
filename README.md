@@ -52,14 +52,19 @@ MLflow is on port 5001 because macOS AirPlay Receiver occupies 5000.
 `make portal`, then open http://localhost:8501. Every page drives the same
 tested pipeline code as the commands below; nothing runs only in the browser.
 
-| Page | What you do |
-|---|---|
-| 1 · Data | Upload a CSV. It is scanned for personal data (blocked if found), you map its columns to the roles (customer key, date, offer, outcome, optional value and propensity) and choose features, protected attributes and an eligibility column; it is saved under `data/datasets/<name>/` and versioned with DVC. |
-| 2 · Explore | Interactive EDA on the dataset, and the standard EDA report as a job. |
-| 3 · Train | Out-of-time or random split (e.g. 60/40), features, XGBoost / random forest / logistic regression with their settings, class weighting, optional grid search on the training data only. Runs in the background. |
-| 4 · Results | Train vs test accuracy, precision, recall, F1, ROC-AUC, PR-AUC and Brier per offer (overfitting gap), feature importance, tuning results, comparison of runs. |
-| 5 · Validate | Reproducibility test, policy evaluation with fairness (direct method when the data has no propensities), drift monitoring. |
-| 6 · Deploy | Deployment gate (finished, committed code, reproducibility passed), sets the registry alias `production`, the API reloads, try a recommendation, decision log. |
+The pages follow the machine learning life cycle: data collection, pre-processing
+(cleaning and feature engineering), training and validation, testing, deployment
+and maintenance.
+
+| Page | Life-cycle stage | What you do |
+|---|---|---|
+| 1 · Data | Data collection and cleaning | Upload a CSV. It is scanned for personal data (blocked if found); you map its columns to the roles (customer key, date, offer, outcome, optional value and propensity) and choose features, protected attributes and an eligibility column. Clean it: drop columns, standardise text, drop incomplete and duplicate rows, date range, sparse features, mean/median/mode imputation, outliers by quantile or standard deviations (cap or drop), rare categories. The cleaning recipe and log are saved with the dataset under `data/datasets/<name>/`, versioned with DVC. Registered datasets can be cleaned into new ones or deleted. |
+| 2 · Explore | Exploratory data analysis | Bar and pie charts, histograms with a normal curve, box plots, time plots, summary statistics (mean, median, mode, standard deviation, range, skewness), contingency tables, acceptance rates with binomial intervals, correlation and statistical tests; the standard EDA report as a job. |
+| 3 · Features | Feature engineering | Feature creation (a + b, a − b, a × b, a ÷ b), log transform, binning, binarisation and date split, with a preview; feature relevance by mutual information on the earliest 70% of offers. The recipe is saved with the dataset and applied identically in training, reproduction, evaluation and scoring. |
+| 4 · Train | Model building and training | Out-of-time or random split (e.g. 60/40), features, imputation, scaling (standard or min-max), one-hot encoding, PCA, XGBoost / random forest / logistic regression with their settings, class weighting, grid search on the training data only, and model selection across the three families. Runs in the background. |
+| 5 · Results | Model testing | Train vs test accuracy, precision, recall, F1, ROC-AUC, PR-AUC and Brier per offer with an overfitting / underfitting verdict, confusion matrix, feature importance, tuning results, model selection and comparison of runs. |
+| 6 · Validate | Validation and maintenance | Reproducibility test, policy evaluation with fairness (direct method when the data has no propensities), drift monitoring with a retraining recommendation. |
+| 7 · Deploy | Deployment and prediction | Deployment gate (finished, committed code, reproducibility passed), sets the registry alias `production`, the API reloads; try a recommendation, batch-score a customer file, decision log. |
 
 Each portal run records its full parameter set, so it can be reproduced and
 compared like any other run. Runs started while code is uncommitted can be

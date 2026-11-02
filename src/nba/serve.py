@@ -50,7 +50,8 @@ def create_app(policy, log_path, loader=None):
     @app.get("/schema")
     def schema():
         p = serving()
-        return {"features": p.meta["features"], "categories": p.meta["categories"],
+        inputs = p.meta.get("inputs", p.meta["features"])  # engineered features are computed here
+        return {"features": inputs, "categories": {c: v for c, v in p.meta["categories"].items() if c in inputs},
                 "eligibility_column": p.meta.get("eligibility_column", "consent_marketing")}
 
     @app.post("/reload")
@@ -63,11 +64,12 @@ def create_app(policy, log_path, loader=None):
     @app.post("/recommend")
     def recommend(customer: Customer):
         policy = serving()
-        missing = sorted(set(policy.meta["features"]) - set(customer.features))
+        inputs = policy.meta.get("inputs", policy.meta["features"])
+        missing = sorted(set(inputs) - set(customer.features))
         if missing:
             raise HTTPException(422, f"missing features: {missing}")
         for col, categories in policy.meta["categories"].items():
-            if str(customer.features[col]) not in categories:
+            if col in inputs and str(customer.features[col]) not in categories:
                 raise HTTPException(422, f"unknown {col} {customer.features[col]!r}; expected one of {categories}")
 
         eligibility = policy.meta.get("eligibility_column", "consent_marketing") or "consent_marketing"

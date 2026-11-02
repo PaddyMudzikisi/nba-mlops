@@ -29,6 +29,14 @@ def load_schema(name):
     return yaml.safe_load((DATASETS / name / "schema.yaml").read_text())
 
 
+def save_schema(name, schema):
+    """Rewrite a dataset's schema.yaml, keeping any comment lines at its top."""
+    path = DATASETS / name / "schema.yaml"
+    header = "".join(line for line in path.read_text().splitlines(keepends=True)
+                     if line.startswith("#")) if path.exists() else ""
+    path.write_text(header + yaml.safe_dump(schema, sort_keys=False))
+
+
 def params_for(name, base=None):
     """The default params with this dataset's schema in place of params.yaml's."""
     params = copy.deepcopy(base or load_params())

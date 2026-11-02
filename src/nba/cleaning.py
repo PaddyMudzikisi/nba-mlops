@@ -14,15 +14,17 @@ DEFAULT = {
     "date_to": None,             # ... and on or before this date
     "drop_duplicates": True,     # exact duplicate rows
     "max_missing_share": None,   # drop features missing in more than this share of rows
-    "fill_numeric": "model",     # model (median, fitted on training data) | median | drop
+    "fill_numeric": "model",     # model (fitted on training data) | mean | median | drop
     "fill_categorical": "model",  # model ("missing" category) | mode | drop
     "outliers": "none",          # none | cap | drop
     "outlier_columns": [],
+    "outlier_method": "quantile",  # quantile | zscore (beyond outlier_z standard deviations of the mean)
     "outlier_quantiles": [0.01, 0.99],
+    "outlier_z": 3.0,
     "rare_category_min": 0,      # categories with fewer rows become "other"
     "drop_thin_offers": False,   # offers with fewer than 10 acceptances or 10 rejections
 }
-FILL_NUMERIC = ["model", "median", "drop"]
+FILL_NUMERIC = ["model", "mean", "median", "drop"]
 FILL_CATEGORICAL = ["model", "mode", "drop"]
 OUTLIERS = ["none", "cap", "drop"]
 
@@ -157,26 +159,33 @@ def clean(frame, schema, recipe):
         else:
             filled = int(frame[cols].isna().sum().sum())
             for c in cols:
-                value = frame[c].median() if how == "median" else frame[c].mode().iloc[0]
+                value = {"mean": frame[c].mean, "median": frame[c].median,
+                         "mode": lambda: frame[c].mode().iloc[0]}[how]()
                 frame[c] = frame[c].fillna(value)
             step(f"fill missing {kind} features ({how})", before, f"{filled:,} values filled")
 
     cols = [c for c in recipe["outlier_columns"] if c in frame and pd.api.types.is_numeric_dtype(frame[c])]
     if recipe["outliers"] != "none" and cols:
         before = len(frame)
-        lo_q, hi_q = recipe["outlier_quantiles"]
-        bounds = {c: (frame[c].quantile(lo_q), frame[c].quantile(hi_q)) for c in cols}
+        if recipe["outlier_method"] == "zscore":
+            z = recipe["outlier_z"]
+            bounds = {c: (frame[c].mean() - z * frame[c].std(), frame[c].mean() + z * frame[c].std()) for c in cols}
+            rule = f"more than {z:g} standard deviations from the mean"
+        else:
+            lo_q, hi_q = recipe["outlier_quantiles"]
+            bounds = {c: (frame[c].quantile(lo_q), frame[c].quantile(hi_q)) for c in cols}
+            rule = f"outside the {lo_q:.0%}-{hi_q:.0%} quantiles"
         if recipe["outliers"] == "cap":
             capped = sum(int(((frame[c] < lo) | (frame[c] > hi)).sum()) for c, (lo, hi) in bounds.items())
             for c, (lo, hi) in bounds.items():
                 frame[c] = frame[c].clip(lo, hi)
-            step("cap outliers", before, f"{capped:,} values capped to the {lo_q:.0%}-{hi_q:.0%} quantiles")
+            step("cap outliers", before, f"{capped:,} values {rule} capped")
         else:
             keep = pd.Series(True, index=frame.index)
             for c, (lo, hi) in bounds.items():
                 keep &= frame[c].isna() | frame[c].between(lo, hi)
             frame = frame[keep]
-            step("drop outlier rows", before, f"outside the {lo_q:.0%}-{hi_q:.0%} quantiles")
+            step("drop outlier rows", before, rule)
 
     if recipe["rare_category_min"]:
         grouped = []

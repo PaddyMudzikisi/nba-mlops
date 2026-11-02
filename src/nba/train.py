@@ -19,7 +19,7 @@ import sklearn
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
 
-from nba import models
+from nba import engineer, models
 from nba.config import REPO, load_params
 from nba.features import build_action_frame, dataset_sha256, features, load_data
 
@@ -116,6 +116,9 @@ def flat_params(params):
            "tuning": params.get("tuning", {}).get("enabled", False), "n_features": len(features(params))}
     out.update({"train_end": split["train_end"]} if out["split_method"] == "time" else {"test_size": split["test_size"]})
     out.update({f"{kind}_{k}": v for k, v in params.get(kind, {}).items()})
+    if kind != "xgboost":
+        out.update({f"prep_{k}": v for k, v in params.get("preprocessing", {}).items()})
+    out["n_engineered"] = len(params["dataset"].get("engineered") or [])
     return out
 
 
@@ -137,6 +140,8 @@ def run(params, run_name="train"):
             "features": features(params),
             "categories": {col: data[col].cat.categories.tolist() for col in params["dataset"]["categorical"]},
             "eligibility_column": params["dataset"].get("eligibility_column"),
+            "engineered": params["dataset"].get("engineered") or [],
+            "inputs": engineer.raw_inputs(features(params), params["dataset"].get("engineered")),
             "model_type": models.model_type(params),
             "actions": {},
         }
@@ -159,7 +164,7 @@ def run(params, run_name="train"):
                 mlflow.log_dict({"method": method, "importance": imp}, "importance.json")
                 with tempfile.TemporaryDirectory() as tmp:
                     path = Path(tmp) / "test_predictions.csv"
-                    pd.DataFrame({"offer_id": test.offer_id, "proba": r["proba"]}).to_csv(
+                    pd.DataFrame({"offer_id": test.offer_id, "proba": r["proba"], "accepted": test.accepted}).to_csv(
                         path, index=False, float_format="%.17g")
                     mlflow.log_artifact(str(path))
                 flavor, info = models.log_model(r["model"], params, registered_name(params, action))
@@ -182,9 +187,11 @@ def run(params, run_name="train"):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--params", help="parameter set to train with (default: params.yaml)")
+    parser.add_argument("--params", nargs="+",
+                        help="parameter set(s) to train with, one run each in turn (default: params.yaml)")
     args = parser.parse_args()
-    run(load_params(args.params) if args.params else load_params())
+    for path in args.params or [None]:
+        run(load_params(path) if path else load_params())
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-"""Configure a training run (split, features, model, tuning) and start it as a
-background job. The choices become a parameter set that the run records, so
+"""Configure a training run (split, features, preprocessing, model, tuning) and
+start it as a background job, or train every model family for model selection. The choices become a parameter set that the run records, so
 the run can be regenerated exactly."""
 import copy
 from datetime import datetime, timezone
@@ -13,7 +13,7 @@ from nba.config import REPO, load_params
 from nba.explore import load
 from nba.portal import common
 
-common.page("3 · Train")
+common.page("4 · Train")
 name = common.active_dataset("train")
 if name is None:
     st.stop()
@@ -55,6 +55,9 @@ numeric = c2.multiselect("Numeric", schema["numeric"], schema["numeric"])
 if schema.get("protected"):
     st.caption(f"Protected attributes ({', '.join(schema['protected'])}) are never used as features; "
                "they are kept for the fairness check.")
+engineered = [s["name"] for s in schema.get("engineered") or []]
+if engineered:
+    st.caption(f"Engineered on the Features page: {', '.join(engineered)}.")
 
 st.subheader("Model")
 kind = st.selectbox("Model family", models.MODEL_TYPES,
@@ -79,6 +82,24 @@ elif kind == "random_forest":
 else:
     hyper["C"] = c[0].select_slider("Inverse regularisation C", [0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
                                     float(hyper.get("C", 1.0)))
+st.subheader("Preprocessing")
+if kind == "xgboost":
+    st.caption("XGBoost handles missing values itself and uses the categories directly, and trees do not depend on "
+               "the scale of a feature, so it needs no imputation, scaling or one-hot encoding.")
+    prep = {}
+else:
+    c = st.columns(3)
+    prep = {"impute": c[0].selectbox("Missing numeric values", models.IMPUTE,
+                                     format_func={"median": "median", "mean": "mean",
+                                                  "most_frequent": "mode (most frequent)"}.get),
+            "scaling": c[1].selectbox("Scaling", models.SCALING,
+                                      index=1 if kind == "logistic_regression" else 0,
+                                      format_func={"none": "none", "standard": "standardise (z-score)",
+                                                   "minmax": "min-max to [0, 1]"}.get),
+            "pca_components": int(c[2].number_input("PCA components of the numeric features (0 = off)", 0,
+                                                    len(numeric) or 1, 0))}
+    st.caption("Fitted on the training data only. Categorical features are one-hot encoded; categories not seen "
+               "in training are ignored. Missing categorical values form their own category.")
 balance = st.checkbox("Weight classes to balance acceptances and rejections", value=bool(base.get("balance_classes")),
                       help="Off by default: weighting inflated the probabilities that the expected-value ranking "
                            "compares across offers (see experiments/calibration_comparison.py).")
@@ -108,16 +129,42 @@ label = st.text_input("Label for this run", f"{kind} · {method} split")
 params = copy.deepcopy(base)
 params["dataset"] = {**schema, "categorical": categorical, "numeric": numeric}
 params.update({"split": split, "model": {"type": kind}, kind: hyper, "balance_classes": balance, "tuning": tune_cfg})
+if prep:
+    params["preprocessing"] = prep
 with st.expander("Parameter set to be recorded"):
-    st.code(yaml.safe_dump({k: params[k] for k in ["split", "model", kind, "balance_classes", "tuning"]},
-                           sort_keys=False), language="yaml")
+    st.code(yaml.safe_dump({k: params[k] for k in ["split", "model", kind, "preprocessing", "balance_classes", "tuning"]
+                            if k in params}, sort_keys=False), language="yaml")
 ready = bool(categorical + numeric) and min(n_train, n_test) >= 200
-if st.button("Start training", type="primary", disabled=not ready):
+
+
+def start(param_sets, run_label):
     folder = REPO / "logs" / "jobs" / "params"
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{name}.yaml"
-    path.write_text(yaml.safe_dump(params, sort_keys=False))
-    jobs.start("train", ["--params", path.relative_to(REPO)], label=f"{name} · {label}")
+    paths = []
+    for p in param_sets:
+        path = folder / f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{p['model']['type']}-{name}.yaml"
+        path.write_text(yaml.safe_dump(p, sort_keys=False))
+        paths.append(str(path.relative_to(REPO)))
+    jobs.start("train", ["--params", *paths], label=f"{name} · {run_label}")
+
+
+c1, c2 = st.columns(2)
+if c1.button("Start training", type="primary", disabled=not ready, width="stretch"):
+    start([params], label)
     st.success("Training started. Follow it below; results appear on the Results page when it finishes.")
+if c2.button("Model selection: train all three families", disabled=not ready, width="stretch",
+             help="Same split and features for XGBoost, random forest and logistic regression (the others with "
+                  "their default settings), then compare them on the Results page."):
+    sets = []
+    for other in models.MODEL_TYPES:
+        p = copy.deepcopy(params)
+        p["model"] = {"type": other}
+        if other != kind:
+            p[other] = dict(base.get(other, {}))
+            p.pop("preprocessing", None)
+        sets.append(p)
+    start(sets, f"model selection · {method} split")
+    st.success("Training the three model families one after another. Compare them on the Results page, "
+               "Model selection tab.")
 
 common.job_panel(match="train", title="Training jobs")

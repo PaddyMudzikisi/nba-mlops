@@ -4,7 +4,8 @@ import streamlit as st
 
 from nba import cleaning
 
-FILL_TEXT = {"model": "leave to the model (fitted on training data only)", "median": "fill with the median",
+FILL_TEXT = {"model": "leave to the model (fitted on training data only)", "mean": "fill with the mean",
+             "median": "fill with the median",
              "mode": "fill with the most common value", "drop": "drop the rows"}
 
 
@@ -63,10 +64,18 @@ def controls(frame, schema, key):
                                   format_func={"none": "keep", "cap": "cap", "drop": "drop rows"}.get)
     recipe["outlier_columns"] = c2.multiselect("in these numeric features", numeric,
                                                disabled=recipe["outliers"] == "none", key=f"{key}-outcols")
-    tail = c3.slider("Tail beyond which a value is an outlier", 0.5, 5.0, 1.0, 0.5, format="%.1f%%",
-                     disabled=recipe["outliers"] == "none", key=f"{key}-tail")
-    recipe["outlier_quantiles"] = [round(tail / 100, 4), round(1 - tail / 100, 4)]
-    if recipe["fill_numeric"] in ("median",) or recipe["fill_categorical"] == "mode" or recipe["outliers"] != "none":
+    recipe["outlier_method"] = c3.radio("Outlier rule", ["quantile", "zscore"], horizontal=True,
+                                        disabled=recipe["outliers"] == "none", key=f"{key}-rule",
+                                        format_func={"quantile": "extreme quantiles",
+                                                     "zscore": "standard deviations"}.get)
+    if recipe["outlier_method"] == "zscore":
+        recipe["outlier_z"] = c3.slider("More than this many standard deviations from the mean", 2.0, 5.0, 3.0,
+                                        0.5, disabled=recipe["outliers"] == "none", key=f"{key}-z")
+    else:
+        tail = c3.slider("Tail beyond which a value is an outlier", 0.5, 5.0, 1.0, 0.5, format="%.1f%%",
+                         disabled=recipe["outliers"] == "none", key=f"{key}-tail")
+        recipe["outlier_quantiles"] = [round(tail / 100, 4), round(1 - tail / 100, 4)]
+    if recipe["fill_numeric"] in ("mean", "median") or recipe["fill_categorical"] == "mode" or recipe["outliers"] != "none":
         st.caption("Filling and outlier limits here are computed on the whole file, including the later offers "
                    "used for testing. Leaving missing values to the model avoids that, because its imputer is "
                    "fitted on the training data only.")

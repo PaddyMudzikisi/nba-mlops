@@ -13,9 +13,12 @@ from sklearn.metrics import (accuracy_score, average_precision_score, brier_scor
                              precision_score, recall_score, roc_auc_score)
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, TimeSeriesSplit, cross_val_predict
 from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, StandardScaler
 
 MODEL_TYPES = ["xgboost", "random_forest", "logistic_regression"]
+IMPUTE = ["median", "mean", "most_frequent"]
+SCALING = ["none", "standard", "minmax"]
 
 
 def model_type(params):
@@ -31,9 +34,7 @@ def build(params, categorical, numeric, scale_pos_weight):
         return xgb.XGBClassifier(**hyper, scale_pos_weight=scale_pos_weight, random_state=seed, n_jobs=n_jobs,
                                  enable_categorical=True)
     weight = None if scale_pos_weight == 1.0 else {0: 1.0, 1: scale_pos_weight}
-    numeric_prep = SimpleImputer(strategy="median")
-    if kind == "logistic_regression":
-        numeric_prep = make_pipeline(SimpleImputer(strategy="median"), StandardScaler())
+    numeric_prep = numeric_steps(params, kind, len(numeric))
     prep = ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore"), categorical),
                               ("num", numeric_prep, numeric)])
     if kind == "random_forest":
@@ -43,6 +44,23 @@ def build(params, categorical, numeric, scale_pos_weight):
     else:
         raise ValueError(f"unknown model type {kind!r}; expected one of {MODEL_TYPES}")
     return Pipeline([("prep", prep), ("clf", clf)])
+
+
+def numeric_steps(params, kind, n_numeric):
+    """Imputation, then optional scaling and PCA, for the numeric features of the
+    scikit-learn models; fitted on the training data only. Runs recorded before
+    these options existed used the median and, for logistic regression, standard
+    scaling. XGBoost needs none of this: it handles missing values natively and
+    trees do not depend on scale."""
+    cfg = params.get("preprocessing", {})
+    steps = [SimpleImputer(strategy=cfg.get("impute", "median"))]
+    scaling = cfg.get("scaling", "standard" if kind == "logistic_regression" else "none")
+    if scaling != "none":
+        steps.append({"standard": StandardScaler, "minmax": MinMaxScaler}[scaling]())
+    k = min(int(cfg.get("pca_components", 0) or 0), n_numeric)
+    if k:
+        steps.append(PCA(n_components=k, random_state=params["seed"]))
+    return steps[0] if len(steps) == 1 else make_pipeline(*steps)
 
 
 def tune(model, params, X, y, dates):
