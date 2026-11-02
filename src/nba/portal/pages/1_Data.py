@@ -98,13 +98,12 @@ with upload:
         st.stop()
     st.write(f"**{len(frame):,} rows × {frame.shape[1]} columns**")
 
-    st.subheader("Privacy check")
-    result = scan(frame)
+    result = scan(frame)  # personal data blocks the upload; a clean file passes silently
     if not result["clean"]:
+        st.subheader("Privacy check")
         st.error("Blocked: values that look like personal data were found. Remove or mask them and upload again.")
         st.table(pd.DataFrame([{"column": c, **hits} for c, hits in result["pattern_matches"].items()]).fillna(0))
         st.stop()
-    st.success("No e-mail addresses, phone numbers, national ID numbers or long account-like numbers found.")
     if result["sensitive_columns"]:
         st.warning("These column names suggest personal data. They are removed unless you confirm they are safe.")
         keep = st.multiselect("Keep these columns (only if they hold no personal data)", result["sensitive_columns"])
