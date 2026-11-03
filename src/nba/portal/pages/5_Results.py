@@ -1,13 +1,17 @@
 """Training results: test vs train metrics per offer with an overfitting /
-underfitting verdict, confusion matrix, feature importance, tuning results,
+underfitting verdict, confusion matrix, feature importance, the features that
+predict acceptance across all offers (with the direction of their effect),
 model selection across model families, and side-by-side comparison of runs."""
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
 
+from nba import insights
 from nba.explore import load
+from nba.features import load_data
 from nba.portal import common
+from nba.train import test_rows
 from nba.report import INK2, label
 
 common.page("5 · Results")
@@ -39,7 +43,23 @@ def fit(train_auc, test_auc):
     return "good fit"
 
 
-detail, selection, compare = st.tabs(["Run detail", "Model selection", "Compare runs"])
+@st.cache_resource(show_spinner="Loading the run's models...")
+def run_policy(run_id):
+    from nba.policy import Policy
+    return Policy.from_run(run_id)
+
+
+@st.cache_data(show_spinner="Computing SHAP values on the test offers...")
+def shap_for(run_id, offer):
+    params = common.load_artifact_yaml(run_id, "params.yaml")
+    policy = run_policy(run_id)
+    _, test = test_rows(load_data(params), params)
+    X = policy.encode(test[test.action == offer])
+    return X, insights.shap_values(policy.models[offer], X)
+
+
+detail, predictive, selection, compare = st.tabs(["Run detail", "Predictive features", "Model selection",
+                                                  "Compare runs"])
 with detail:
     run_id = common.pick_run(runs, "results-run")
     kids = common.child_runs(run_id)
@@ -130,6 +150,76 @@ with detail:
     params = common.load_artifact_yaml(run_id, "params.yaml")
     with st.expander("Recorded parameter set"):
         st.json(params or {}, expanded=False)
+
+with predictive:
+    st.markdown("Which customer features predict acceptance of each offer, how strongly, and in which direction. "
+                "Importance is each feature's share of the model's total importance for that offer, so offers "
+                "can be compared.")
+    run_p = common.pick_run(runs, "predictive-run",
+                            help_text="Prefer an out-of-time run for conclusions: random splits are optimistic.")
+    kids_p = common.child_runs(run_p)
+    imps, method = {}, None
+    for _, k in kids_p.iterrows():
+        d = common.load_artifact_json(k.run_id, "importance.json")
+        if d is None:
+            d = {"method": "mean |SHAP|", "importance": common.load_artifact_json(k.run_id, "shap_mean_abs.json") or {}}
+        imps[k["tags.action"]], method = d["importance"], d["method"]
+    if not any(imps.values()):
+        st.info("This run did not record feature importance.")
+    else:
+        share = insights.importance_table(imps)
+        st.markdown(f"**Answer** ({method}, on the run's test offers)")
+        st.markdown("\n".join(f"- {line}" for line in insights.summary(share, label)))
+        offers = [c for c in share.columns if c not in ("mean share", "rank")]
+        grid = share[offers + ["mean share"]]
+        fig, ax = plt.subplots(figsize=(1.25 * grid.shape[1] + 3, 0.36 * len(grid) + 1.4))
+        ax.imshow(grid.to_numpy(), cmap="Blues", aspect="auto")
+        top = grid.to_numpy().max()
+        for (i, j), v in np.ndenumerate(grid.to_numpy()):
+            ax.text(j, i, f"{v:.1f}", ha="center", va="center", fontsize=8, color="white" if v > top * 0.6 else INK2)
+        ax.set_xticks(range(grid.shape[1]), [label(c) for c in offers] + ["mean"], rotation=25, ha="right")
+        ax.set_yticks(range(len(grid)), grid.index)
+        ax.grid(False)
+        ax.set_title("Share of importance (%) by offer, features ranked by the mean")
+        st.pyplot(fig)
+        plt.close(fig)
+        st.download_button("Download the table (CSV)", share.round(2).to_csv().encode(),
+                           f"predictive_features_{run_p[:8]}.csv", "text/csv")
+
+        st.markdown("**Direction of effect**")
+        if (common.load_artifact_json(run_p, "policy.json") or {}).get("model_type", "xgboost") != "xgboost":
+            st.info("The direction of effect uses SHAP values, available for XGBoost runs. For this run, see the "
+                    "acceptance rate by each feature on the Explore page.")
+        else:
+            offer_p = st.selectbox("Offer", offers, format_func=label, key="predictive-offer")
+            try:
+                X, sh = shap_for(run_p, offer_p)
+            except Exception as e:  # noqa: BLE001  (dataset no longer on this machine, etc.)
+                st.warning(f"Could not recompute SHAP values for this run: {e}")
+            else:
+                cats = list(run_policy(run_p).meta["categories"])
+                dirs = insights.directions(X, sh, cats)
+                order = {f: i for i, f in enumerate(share[offer_p].sort_values(ascending=False).index)}
+                dirs = dirs.assign(importance=dirs.feature.map(share[offer_p]).round(1)).sort_values(
+                    "feature", key=lambda s: s.map(order))
+                st.dataframe(dirs[["feature", "importance", "raises acceptance", "lowers acceptance", "type"]]
+                             .rename(columns={"importance": "importance share (%)"}), hide_index=True,
+                             width="stretch")
+                st.caption("Numeric features: whether higher or lower values push the predicted acceptance up "
+                           "(Spearman correlation of the value with its SHAP contribution). Categorical features: "
+                           "the categories with the highest and lowest average contribution (groups of at least "
+                           "20 offers). These are associations learned by the model, not causal effects.")
+                feat = st.selectbox("Show the effect of", dirs.feature.tolist(), key="predictive-feature")
+                dep = insights.dependence(X, sh, feat, cats)
+                fig, ax = plt.subplots(figsize=(7, 0.4 * len(dep) + 1.3))
+                ax.barh(dep.index, dep["mean SHAP"], height=0.7,
+                        color=[common.PALETTE[0] if v >= 0 else common.PALETTE[1] for v in dep["mean SHAP"]])
+                ax.axvline(0, color=INK2, lw=1)
+                ax.grid(axis="y", visible=False)
+                ax.set_xlabel("average contribution to the log-odds of acceptance")
+                ax.set_title(f"{label(offer_p)}: effect of {feat} (blue raises, orange lowers acceptance)")
+                st.pyplot(fig)
+                plt.close(fig)
 
 with selection:
     st.markdown("The latest finished run of each model family on this dataset, compared on the same metrics. "

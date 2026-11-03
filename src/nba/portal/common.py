@@ -94,7 +94,19 @@ def latest_related(step_tag, run_id):
     return None if runs.empty else runs.iloc[0]
 
 
+@st.cache_data(ttl=30)
+def artifact_paths(run_id):
+    """Top-level artifact paths of a run. Checked before downloading, because
+    asking the server for a missing artifact makes the client retry for minutes."""
+    try:
+        return {a.path for a in mlflow.MlflowClient().list_artifacts(run_id)}
+    except Exception:  # noqa: BLE001
+        return set()
+
+
 def load_artifact_json(run_id, path):
+    if path not in artifact_paths(run_id):
+        return None
     try:
         return mlflow.artifacts.load_dict(f"runs:/{run_id}/{path}")
     except Exception:  # noqa: BLE001  (missing artifact)
@@ -104,6 +116,8 @@ def load_artifact_json(run_id, path):
 @st.cache_data(ttl=60)
 def load_artifact_csv(run_id, path):
     import tempfile
+    if path not in artifact_paths(run_id):
+        return None
     try:
         with tempfile.TemporaryDirectory() as tmp:
             return pd.read_csv(mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=path, dst_path=tmp))
@@ -115,6 +129,8 @@ def load_artifact_yaml(run_id, path):
     import tempfile
 
     import yaml
+    if path not in artifact_paths(run_id):
+        return None
     try:
         with tempfile.TemporaryDirectory() as tmp:
             local = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=path, dst_path=tmp)
